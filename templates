@@ -2,11 +2,7 @@ app.py
 login.html
 dashboard.html
 hotels.html
-rooms.html
-...
-app.py
-requirements.txt
-
+rooms.htm
 templates/
    login.html
    dashboard.html
