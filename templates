@@ -4,3 +4,17 @@ dashboard.html
 hotels.html
 rooms.html
 ...
+app.py
+requirements.txt
+
+templates/
+   login.html
+   dashboard.html
+   hotels.html
+   rooms.html
+   bookings.html
+   employees.html
+   invoice.html
+   reports.html
+   seasons.html
+   base.html
