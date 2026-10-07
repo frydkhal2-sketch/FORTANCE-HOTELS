@@ -234,6 +234,7 @@ def reports():
                               FROM hotels h LEFT JOIN bookings b ON b.hotel_id=h.id GROUP BY h.id""").fetchall()
     c.close(); return render_template("reports.html", rows=rows)
 
+init_db()
+
 if __name__=="__main__":
-    init_db()
     app.run(host="127.0.0.1", port=5000, debug=False)
