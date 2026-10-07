@@ -3,9 +3,7 @@
   --navy:#071426;
   --navy2:#102844;
   --gold:#d9a83f;
-  --gold-light:#f4dfaa;
   --blue:#3e7fd0;
-  --blue-light:#edf5ff;
   --bg:#f5f7fb;
   --white:#fff;
   --line:#e5eaf1;
@@ -17,7 +15,7 @@
   --orange-bg:#fff4df;
   --red:#c53030;
   --red-bg:#fee8e8;
-  --shadow:0 8px 28px rgba(15,30,55,.06);
+  --shadow:0 8px 28px rgba(15,30,55,.07);
 }
 
 *{
@@ -43,12 +41,13 @@ a{
 
 button,
 input,
-select{
+select,
+textarea{
   font-family:inherit;
 }
 
 /* =========================
-   MAIN LAYOUT
+   LAYOUT
 ========================= */
 
 .layout{
@@ -67,17 +66,21 @@ select{
   bottom:0;
   width:255px;
   padding:18px 15px;
-  background:
-    linear-gradient(180deg,#061225 0%,#0b1b31 55%,#102844 100%);
+  background:linear-gradient(
+    180deg,
+    #061225 0%,
+    #0b1b31 55%,
+    #102844 100%
+  );
   color:#fff;
   overflow-y:auto;
   z-index:100;
-  box-shadow:-8px 0 25px rgba(0,0,0,.08);
+  box-shadow:-8px 0 25px rgba(0,0,0,.10);
 }
 
 .brand{
   background:rgba(255,255,255,.04);
-  border:1px solid rgba(217,168,63,.28);
+  border:1px solid rgba(217,168,63,.30);
   border-radius:18px;
   padding:10px;
   margin-bottom:18px;
@@ -96,7 +99,7 @@ select{
   margin-bottom:16px;
   border-radius:13px;
   background:rgba(255,255,255,.07);
-  border:1px solid rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.06);
   color:#fff;
   line-height:1.8;
 }
@@ -117,7 +120,7 @@ select{
 .menu{
   display:flex;
   flex-direction:column;
-  gap:4px;
+  gap:5px;
 }
 
 .menu a{
@@ -132,13 +135,17 @@ select{
 }
 
 .menu a:hover{
-  background:rgba(62,127,208,.16);
+  background:rgba(62,127,208,.17);
   color:#fff;
   transform:translateX(-2px);
 }
 
 .menu a.active{
-  background:linear-gradient(90deg,rgba(62,127,208,.34),rgba(62,127,208,.12));
+  background:linear-gradient(
+    90deg,
+    rgba(62,127,208,.36),
+    rgba(62,127,208,.12)
+  );
   color:#fff;
   border-right:3px solid var(--gold);
 }
@@ -151,11 +158,11 @@ select{
   margin-right:255px;
   width:calc(100% - 255px);
   min-height:100vh;
-  padding:25px 28px 40px;
+  padding:28px;
 }
 
 /* =========================
-   TOP HEADER
+   HEADER
 ========================= */
 
 .top{
@@ -168,7 +175,7 @@ select{
 
 .top h1{
   margin:0 0 6px;
-  font-size:27px;
+  font-size:28px;
   font-weight:800;
   color:var(--navy);
 }
@@ -195,9 +202,9 @@ select{
   position:relative;
   background:var(--white);
   border:1px solid var(--line);
-  border-radius:17px;
+  border-radius:18px;
   padding:20px;
-  min-height:135px;
+  min-height:140px;
   box-shadow:var(--shadow);
   overflow:hidden;
 }
@@ -205,22 +212,22 @@ select{
 .card::after{
   content:"";
   position:absolute;
-  left:-25px;
-  bottom:-35px;
-  width:100px;
-  height:100px;
+  left:-30px;
+  bottom:-40px;
+  width:110px;
+  height:110px;
   border-radius:50%;
   background:rgba(62,127,208,.06);
 }
 
 .card .icon{
-  width:43px;
-  height:43px;
+  width:45px;
+  height:45px;
   display:grid;
   place-items:center;
-  border-radius:12px;
-  background:var(--blue-light);
-  font-size:20px;
+  border-radius:13px;
+  background:#edf5ff;
+  font-size:21px;
 }
 
 .card .big{
@@ -243,8 +250,8 @@ select{
 .panel{
   background:#fff;
   border:1px solid var(--line);
-  border-radius:17px;
-  padding:20px;
+  border-radius:18px;
+  padding:21px;
   margin-top:18px;
   box-shadow:var(--shadow);
 }
@@ -264,7 +271,7 @@ select{
 }
 
 /* =========================
-   BOOKINGS HEADER
+   BOOKING PAGE
 ========================= */
 
 .booking-header{
@@ -273,16 +280,17 @@ select{
   align-items:center;
   gap:15px;
   background:#fff;
-  padding:20px;
+  padding:22px;
   border:1px solid var(--line);
-  border-radius:17px;
+  border-radius:18px;
   box-shadow:var(--shadow);
   margin-bottom:18px;
 }
 
 .booking-header h1{
-  margin:0 0 5px;
+  margin:0 0 6px;
   color:var(--navy);
+  font-size:27px;
 }
 
 .booking-actions{
@@ -301,7 +309,7 @@ select{
   gap:10px;
   background:#fff;
   border:1px solid var(--line);
-  border-radius:15px;
+  border-radius:16px;
   padding:15px;
   margin-bottom:18px;
   box-shadow:var(--shadow);
@@ -316,14 +324,6 @@ select{
   background:#fff;
   color:var(--text);
   outline:none;
-}
-
-.filters input:focus,
-.filters select:focus,
-.form input:focus,
-.form select:focus{
-  border-color:var(--blue);
-  box-shadow:0 0 0 3px rgba(62,127,208,.1);
 }
 
 /* =========================
@@ -347,6 +347,14 @@ th{
   font-size:12px;
   font-weight:700;
   white-space:nowrap;
+}
+
+th:first-child{
+  border-top-right-radius:10px;
+}
+
+th:last-child{
+  border-top-left-radius:10px;
 }
 
 th,
@@ -376,7 +384,7 @@ tbody tr:last-child td{
   display:inline-flex;
   align-items:center;
   gap:5px;
-  padding:6px 10px;
+  padding:6px 11px;
   border-radius:20px;
   font-size:12px;
   font-weight:700;
@@ -470,13 +478,20 @@ tbody tr:last-child td{
 }
 
 .form input,
-.form select{
+.form select,
+.form textarea{
   width:100%;
   padding:12px;
   border:1px solid var(--line);
   border-radius:10px;
   background:#fff;
   outline:none;
+  color:var(--text);
+}
+
+.form textarea{
+  min-height:110px;
+  resize:vertical;
 }
 
 .form .full{
@@ -484,7 +499,20 @@ tbody tr:last-child td{
 }
 
 /* =========================
-   FLASH MESSAGES
+   FOCUS
+========================= */
+
+.form input:focus,
+.form select:focus,
+.form textarea:focus,
+.filters input:focus,
+.filters select:focus{
+  border-color:var(--blue);
+  box-shadow:0 0 0 3px rgba(62,127,208,.10);
+}
+
+/* =========================
+   FLASH
 ========================= */
 
 .flash{
@@ -512,7 +540,12 @@ tbody tr:last-child td{
   place-items:center;
   padding:20px;
   background:
-    radial-gradient(circle at top right,#173557 0,#071426 45%,#040b15 100%);
+    radial-gradient(
+      circle at top right,
+      #173557 0,
+      #071426 45%,
+      #040b15 100%
+    );
 }
 
 .loginbox{
@@ -599,6 +632,10 @@ tbody tr:last-child td{
   margin-bottom:10px;
 }
 
+.empty h3{
+  color:var(--navy);
+}
+
 /* =========================
    RESPONSIVE
 ========================= */
@@ -648,7 +685,6 @@ tbody tr:last-child td{
     position:relative;
     width:100%;
     height:auto;
-    max-height:none;
   }
 
   .main{
