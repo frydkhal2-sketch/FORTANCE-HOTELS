@@ -1,1 +1,280 @@
-{% extends "base.html" %}{% block content %}<div class="top"><div><h1>الحجوزات</h1><div class="muted">إنشاء الحجز وحساب الليالي والفاتورة تلقائيًا.</div></div></div><div class="panel"><h2>حجز جديد</h2><form method="post" class="form"><label>اسم العميل<input name="customer" required></label><label>رقم الجوال<input name="phone"></label><label>الفندق<select name="hotel_id">{% for h in hotels %}<option value="{{h.id}}">{{h.name}}</option>{% endfor %}</select></label><label>الغرفة<select name="room_id">{% for r in rooms %}<option value="{{r.id}}">{{r.number}} — {{r.room_type}} — {{r.price}} ر.س</option>{% endfor %}</select></label><label>تاريخ الدخول<input type="date" name="checkin" required></label><label>تاريخ الخروج<input type="date" name="checkout" required></label><label>المدفوع<input type="number" name="paid" value="0" step="0.01"></label><div><button class="btn primary">إنشاء الحجز</button></div></form></div><div class="panel"><table><tr><th>رقم الحجز</th><th>العميل</th><th>الفندق</th><th>الغرفة</th><th>التواريخ</th><th>الإجمالي</th><th></th></tr>{% for b in bookings %}<tr><td>{{b.code}}</td><td>{{b.customer}}</td><td>{{b.hotel}}</td><td>{{b.room}}</td><td>{{b.checkin}} → {{b.checkout}}</td><td>{{"{:,.0f}".format(b.price)}} ر.س</td><td><a class="btn gold" href="/invoices/{{b.id}}">فاتورة</a></td></tr>{% endfor %}</table></div>{% endblock %}
+```html
+{% extends "base.html" %}
+
+{% block content %}
+
+<!-- عنوان الصفحة -->
+<div class="booking-header">
+    <div>
+        <h1>📅 إدارة الحجوزات</h1>
+        <p class="muted">إدارة حجوزات العملاء والفنادق والغرف والفواتير.</p>
+    </div>
+
+    <div class="booking-actions">
+        <a href="#new-booking" class="btn gold">＋ حجز جديد</a>
+    </div>
+</div>
+
+
+<!-- إحصائيات الحجوزات -->
+<div class="cards">
+
+    <div class="card">
+        <div class="icon">📅</div>
+        <div class="big">{{ bookings|length }}</div>
+        <div class="label">إجمالي الحجوزات</div>
+    </div>
+
+    <div class="card">
+        <div class="icon">🏨</div>
+        <div class="big">{{ hotels|length }}</div>
+        <div class="label">الفنادق</div>
+    </div>
+
+    <div class="card">
+        <div class="icon">🛏️</div>
+        <div class="big">{{ rooms|length }}</div>
+        <div class="label">الغرف</div>
+    </div>
+
+    <div class="card">
+        <div class="icon">🧾</div>
+        <div class="big">ر.س</div>
+        <div class="label">إدارة الفواتير</div>
+    </div>
+
+</div>
+
+
+<!-- حجز جديد -->
+<div class="panel" id="new-booking">
+
+    <div class="panel-head">
+        <div>
+            <h2>➕ إنشاء حجز جديد</h2>
+            <div class="muted">
+                أدخل بيانات العميل والإقامة لإنشاء الحجز.
+            </div>
+        </div>
+    </div>
+
+    <form method="post" class="form">
+
+        <div class="form-group">
+            <label>اسم العميل</label>
+            <input
+                type="text"
+                name="customer"
+                placeholder="اكتب اسم العميل"
+                required>
+        </div>
+
+        <div class="form-group">
+            <label>رقم الجوال</label>
+            <input
+                type="text"
+                name="phone"
+                placeholder="05xxxxxxxx">
+        </div>
+
+        <div class="form-group">
+            <label>الفندق</label>
+            <select name="hotel_id" required>
+
+                <option value="">اختر الفندق</option>
+
+                {% for h in hotels %}
+                <option value="{{h.id}}">
+                    {{h.name}}
+                </option>
+                {% endfor %}
+
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>الغرفة</label>
+            <select name="room_id" required>
+
+                <option value="">اختر الغرفة</option>
+
+                {% for r in rooms %}
+                <option value="{{r.id}}">
+                    غرفة {{r.number}} — {{r.room_type}} — {{r.price}} ر.س
+                </option>
+                {% endfor %}
+
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>تاريخ الدخول</label>
+            <input
+                type="date"
+                name="checkin"
+                required>
+        </div>
+
+        <div class="form-group">
+            <label>تاريخ الخروج</label>
+            <input
+                type="date"
+                name="checkout"
+                required>
+        </div>
+
+        <div class="form-group">
+            <label>المبلغ المدفوع</label>
+            <input
+                type="number"
+                name="paid"
+                value="0"
+                step="0.01"
+                placeholder="0.00">
+        </div>
+
+        <div class="form-group">
+            <label>طريقة الدفع</label>
+            <select name="payment_method">
+                <option value="cash">نقدي</option>
+                <option value="card">بطاقة</option>
+                <option value="transfer">تحويل بنكي</option>
+            </select>
+        </div>
+
+        <div class="full">
+            <button type="submit" class="btn primary">
+                ✓ إنشاء الحجز
+            </button>
+
+            <a href="/bookings" class="btn danger">
+                إلغاء
+            </a>
+        </div>
+
+    </form>
+
+</div>
+
+
+<!-- قائمة الحجوزات -->
+<div class="panel">
+
+    <div class="panel-head">
+
+        <div>
+            <h2>📋 جميع الحجوزات</h2>
+            <div class="muted">
+                قائمة الحجوزات المسجلة في النظام.
+            </div>
+        </div>
+
+    </div>
+
+
+    {% if bookings %}
+
+    <div class="table-wrap">
+
+        <table>
+
+            <thead>
+                <tr>
+                    <th>رقم الحجز</th>
+                    <th>العميل</th>
+                    <th>الفندق</th>
+                    <th>الغرفة</th>
+                    <th>الدخول</th>
+                    <th>الخروج</th>
+                    <th>الإجمالي</th>
+                    <th>الحالة</th>
+                    <th>الإجراء</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for b in bookings %}
+
+                <tr>
+
+                    <td>
+                        <strong>{{b.code}}</strong>
+                    </td>
+
+                    <td>
+                        {{b.customer}}
+                    </td>
+
+                    <td>
+                        🏨 {{b.hotel}}
+                    </td>
+
+                    <td>
+                        🛏️ {{b.room}}
+                    </td>
+
+                    <td>
+                        {{b.checkin}}
+                    </td>
+
+                    <td>
+                        {{b.checkout}}
+                    </td>
+
+                    <td>
+                        <strong>
+                            {{"{:,.0f}".format(b.price)}} ر.س
+                        </strong>
+                    </td>
+
+                    <td>
+                        <span class="status confirmed">
+                            مؤكد
+                        </span>
+                    </td>
+
+                    <td>
+
+                        <a
+                            class="btn gold"
+                            href="/invoices/{{b.id}}">
+                            🧾 فاتورة
+                        </a>
+
+                    </td>
+
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+    {% else %}
+
+    <div class="empty">
+
+        <div class="empty-icon">📅</div>
+
+        <h3>لا توجد حجوزات حتى الآن</h3>
+
+        <p>
+            ابدأ بإضافة أول حجز من زر "حجز جديد".
+        </p>
+
+        <a href="#new-booking" class="btn gold">
+            ＋ إضافة أول حجز
+        </a>
+
+    </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}
+```
