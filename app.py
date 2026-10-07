@@ -1,9 +1,9 @@
 
-from flask import Flask, render_template, request, redirect, url_for, session, flash, send_file
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 import sqlite3, os, hashlib, secrets
 from functools import wraps
 from datetime import datetime
-from io import BytesIO
+
 
 BASE = os.path.dirname(__file__)
 DB = os.path.join(BASE, "fortans.db")
