@@ -1,1 +1,106 @@
-<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FORTANCE HOTELS</title><link rel="stylesheet" href="{{url_for('static',filename='style.css')}}"></head><body><div class="layout"><aside class="side"><div class="brand"><img src="{{url_for('static',filename='logo.jpg')}}"></div><div class="userbox">مرحبًا <b>{{user_name}}</b><br><span>{{ROLES.get(user_role,user_role)}}</span></div><nav class="menu"><a href="/dashboard">🏠 الرئيسية</a><a href="/hotels">🏨 الفنادق</a><a href="/rooms">🛏️ الغرف</a><a href="/bookings">📅 الحجوزات</a>{% if user_role=='admin' %}<a href="/employees">👥 الموظفون</a>{% endif %}<a href="/seasons">🗓️ الإجازات والمواسم</a><a href="/reports">📊 التقارير</a><a href="/logout">🚪 تسجيل الخروج</a></nav></aside><main class="main">{% with messages=get_flashed_messages(with_categories=true) %}{% for cat,msg in messages %}<div class="flash {{'error' if cat=='error' else ''}}">{{msg}}</div>{% endfor %}{% endwith %}{% block content %}{% endblock %}</main></div></body></html>
+<!doctype html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>FORTANCE HOTELS</title>
+
+ <link rel="stylesheet" href="/style.css">
+</head>
+
+<body>
+
+    <div class="layout">
+
+        <!-- القائمة الجانبية -->
+        <aside class="side">
+
+            <!-- الشعار -->
+            <div class="brand">
+                <img src="{{ url_for('static', filename='logo.jpg') }}">
+            </div>
+
+            <!-- معلومات المستخدم -->
+            <div class="userbox">
+                مرحبًا
+                <b>{{ user_name }}</b>
+                <br>
+
+                <span>
+                    {{ ROLES.get(user_role, user_role) }}
+                </span>
+            </div>
+
+            <!-- القائمة -->
+            <nav class="menu">
+
+                <a href="/dashboard">
+                    🏠 الرئيسية
+                </a>
+
+                <a href="/hotels">
+                    🏨 الفنادق
+                </a>
+
+                <a href="/rooms">
+                    🛏️ الغرف
+                </a>
+
+                <a href="/bookings">
+                    📅 الحجوزات
+                </a>
+
+                {% if user_role == 'admin' %}
+                <a href="/employees">
+                    👥 الموظفون
+                </a>
+                {% endif %}
+
+                <a href="/seasons">
+                    🗓️ الإجازات والمواسم
+                </a>
+
+                <a href="/reports">
+                    📊 التقارير
+                </a>
+
+                <a href="/logout">
+                    🚪 تسجيل الخروج
+                </a>
+
+            </nav>
+
+        </aside>
+
+
+        <!-- المحتوى الرئيسي -->
+        <main class="main">
+
+            <!-- رسائل النظام -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+
+                {% for cat, msg in messages %}
+
+                    <div class="flash {{ 'error' if cat == 'error' else '' }}">
+                        {{ msg }}
+                    </div>
+
+                {% endfor %}
+
+            {% endwith %}
+
+
+            <!-- محتوى الصفحات -->
+            {% block content %}
+
+            {% endblock %}
+
+        </main>
+
+    </div>
+
+</body>
+
+</html>
