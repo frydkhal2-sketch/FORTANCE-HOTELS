@@ -99,7 +99,14 @@ def ctx():
 
 @app.route("/")
 def index(): return redirect(url_for("dashboard") if "uid" in session else url_for("login"))
+@app.route("/style.css")
+def style_css():
+    return send_file(os.path.join(BASE, "style.css"), mimetype="text/css")
 
+
+@app.route("/logo.jpg")
+def logo():
+    return send_file(os.path.join(BASE, "logo.jpg"), mimetype="image/jpeg")
 @app.route("/login", methods=["GET","POST"])
 def login():
     if request.method=="POST":
