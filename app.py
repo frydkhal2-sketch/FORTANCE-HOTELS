@@ -12,8 +12,6 @@ app = Flask(
     template_folder=".",
     static_folder=".",
     static_url_path="/static"
-
-
 app.secret_key = os.environ.get("FORTANCE_SECRET", secrets.token_hex(32))
 
 ROLES = {
