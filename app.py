@@ -582,82 +582,183 @@ def hotels():
         hotels=rows
     )
 
+def get_room_status(room_id, today, bookings):
+    """
+    تحديد حالة الغرفة من الحجوزات الفعلية:
+    vacant = شاغرة
+    occupied = مشغولة
+    checkout_today = مغادرة اليوم
+    upcoming = لديها حجز مستقبلي
+    """
+    room_bookings = [
+        b for b in bookings
+        if b["room_id"] == room_id
+    ]
 
-# =========================
-# الغرف
-# =========================
+    for booking in room_bookings:
+        checkin = booking["checkin"] or ""
+        checkout = booking["checkout"] or ""
+
+        if checkin <= today < checkout:
+            return "occupied"
+
+    for booking in room_bookings:
+        checkin = booking["checkin"] or ""
+        checkout = booking["checkout"] or ""
+
+        if checkin <= today and checkout == today:
+            return "checkout_today"
+
+    for booking in room_bookings:
+        checkin = booking["checkin"] or ""
+        checkout = booking["checkout"] or ""
+
+        if checkin > today and checkout > today:
+            return "upcoming"
+
+    return "vacant"
+
 
 @app.route("/rooms", methods=["GET", "POST"])
-@login_required
 def rooms():
+    from datetime import date
 
-    connection = db()
+    today = date.today().isoformat()
+    selected_hotel = request.args.get("hotel_id", "").strip()
 
-    hotels_list = connection.execute(
-        """
-        SELECT *
-        FROM hotels
-        WHERE active=1
-        ORDER BY name
-        """
-    ).fetchall()
+    con = sqlite3.connect(DB)
+    con.row_factory = sqlite3.Row
 
-    if request.method == "POST":
+    try:
+        if request.method == "POST":
+            hotel_id = request.form.get("hotel_id", "").strip()
+            number = request.form.get("number", "").strip()
+            room_type = request.form.get("room_type", "").strip()
+            price_text = request.form.get("price", "").strip()
 
-        try:
+            if not hotel_id or not number or not room_type or not price_text:
+                flash("يرجى تعبئة جميع بيانات الغرفة.", "error")
+                return redirect(url_for("rooms"))
 
-            connection.execute(
-                """
-                INSERT INTO rooms(
-                    hotel_id,
-                    number,
-                    room_type,
-                    price,
-                    status
+            try:
+                price = float(price_text)
+                if price < 0:
+                    raise ValueError
+            except ValueError:
+                flash("يرجى إدخال سعر صحيح للغرفة.", "error")
+                return redirect(url_for("rooms"))
+
+            hotel = con.execute(
+                "SELECT id FROM hotels WHERE id = ?",
+                (hotel_id,)
+            ).fetchone()
+
+            if not hotel:
+                flash("الفندق المحدد غير موجود.", "error")
+                return redirect(url_for("rooms"))
+
+            try:
+                con.execute(
+                    """
+                    INSERT INTO rooms
+                        (hotel_id, number, room_type, price, status)
+                    VALUES (?, ?, ?, ?, 'available')
+                    """,
+                    (hotel_id, number, room_type, price)
                 )
-                VALUES(?,?,?,?,?)
-                """,
-                (
-                    request.form["hotel_id"],
-                    request.form["number"],
-                    request.form["room_type"],
-                    request.form["price"],
-                    request.form["status"]
-                )
-            )
+                con.commit()
+                flash("تمت إضافة الغرفة بنجاح.", "success")
 
-            connection.commit()
+            except sqlite3.IntegrityError:
+                flash("رقم الغرفة موجود مسبقًا في هذا الفندق.", "error")
 
-            flash(
-                "تمت إضافة الغرفة.",
-                "ok"
-            )
+            return redirect(url_for("rooms", hotel_id=hotel_id))
 
-        except sqlite3.IntegrityError:
+        hotels = con.execute(
+            "SELECT id, name FROM hotels ORDER BY name"
+        ).fetchall()
 
-            flash(
-                "رقم الغرفة موجود لهذا الفندق.",
-                "error"
-            )
-
-    rows = connection.execute(
+        query = """
+            SELECT
+                r.id,
+                r.hotel_id,
+                r.number,
+                r.room_type,
+                r.price,
+                h.name AS hotel_name
+            FROM rooms r
+            JOIN hotels h ON h.id = r.hotel_id
         """
-        SELECT
-            r.*,
-            h.name AS hotel
-        FROM rooms r
-        JOIN hotels h ON h.id=r.hotel_id
-        ORDER BY r.id DESC
-        """
-    ).fetchall()
+        params = []
 
-    connection.close()
+        if selected_hotel:
+            query += " WHERE r.hotel_id = ?"
+            params.append(selected_hotel)
 
-    return render_template(
-        "rooms.html",
-        rooms=rows,
-        hotels=hotels_list
-    )
+        query += " ORDER BY h.name, r.number"
+
+        room_rows = con.execute(query, params).fetchall()
+
+        booking_rows = con.execute(
+            """
+            SELECT room_id, checkin, checkout, status
+            FROM bookings
+            WHERE checkout >= ?
+            """,
+            (today,)
+        ).fetchall()
+
+        cancelled_statuses = {
+            "cancelled", "canceled", "rejected",
+            "ملغي", "ملغاة", "ملغيّة"
+        }
+
+        active_bookings = [
+            dict(b)
+            for b in booking_rows
+            if (b["status"] or "").strip().lower()
+            not in cancelled_statuses
+        ]
+
+        room_list = []
+
+        for room in room_rows:
+            room_data = dict(room)
+            room_data["room_status"] = get_room_status(
+                room_data["id"],
+                today,
+                active_bookings
+            )
+            room_list.append(room_data)
+
+        counts = {
+            "total": len(room_list),
+            "vacant": sum(
+                r["room_status"] == "vacant" for r in room_list
+            ),
+            "occupied": sum(
+                r["room_status"] == "occupied" for r in room_list
+            ),
+            "checkout_today": sum(
+                r["room_status"] == "checkout_today" for r in room_list
+            ),
+            "upcoming": sum(
+                r["room_status"] == "upcoming" for r in room_list
+            ),
+        }
+
+        return render_template(
+            "rooms.html",
+            hotels=hotels,
+            rooms=room_list,
+            counts=counts,
+            selected_hotel=selected_hotel,
+            today=today
+        )
+
+    finally:
+        con.close()
+
 
 
 # =========================
