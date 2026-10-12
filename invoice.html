@@ -1,420 +1,885 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>فاتورة FORTANCE HOTELS</title>
 
-{% extends "base.html" %}
-
-{% block content %}
 <style>
-.invoice-app {
+:root {
     --navy: #071426;
     --navy2: #102844;
     --gold: #d9a83f;
-    --gold-light: #f8efd9;
-    --bg: #f4f6fa;
-    --border: #e5e9f0;
+    --gold-light: #f4dfaa;
+    --bg: #f3f5f9;
+    --text: #263449;
     --muted: #718096;
-    color: var(--navy);
+    --border: #e2e8f0;
+    --white: #ffffff;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 30px 15px;
+    background: var(--bg);
+    color: var(--text);
     font-family: Tahoma, Arial, sans-serif;
-    direction: rtl;
+    font-size: 14px;
+    line-height: 1.8;
 }
-.invoice-app * { box-sizing: border-box; }
-.invoice-app .toolbar {
-    display: flex; justify-content: space-between;
-    align-items: center; flex-wrap: wrap; gap: 12px;
-    margin-bottom: 20px;
+
+.page {
+    max-width: 950px;
+    margin: auto;
 }
-.invoice-app .toolbar h2 { margin: 0; font-size: 23px; }
-.invoice-app .actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.invoice-app button {
-    border: 0; padding: 11px 17px; border-radius: 8px;
-    cursor: pointer; font: inherit; font-weight: bold;
+
+.toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
 }
-.invoice-app .btn-gold { background: var(--gold); color: var(--navy); }
-.invoice-app .btn-dark { background: var(--navy); color: white; }
-.invoice-app .btn-light { background: #edf1f6; color: var(--navy); }
-.invoice-app .paper {
-    max-width: 1000px; margin: auto; padding: 35px;
-    background: white; border: 1px solid var(--border);
-    border-top: 6px solid var(--gold); border-radius: 13px;
-    box-shadow: 0 8px 28px #0714260d;
-}
-.invoice-app .header {
-    display: flex; justify-content: space-between;
-    align-items: center; gap: 20px; flex-wrap: wrap;
-    padding-bottom: 24px; border-bottom: 2px solid var(--border);
-}
-.invoice-app .brand { display: flex; align-items: center; gap: 15px; }
-.invoice-app .logo { width: 115px; max-height: 85px; object-fit: contain; }
-.invoice-app .company { font-size: 23px; font-weight: 900; letter-spacing: .5px; }
-.invoice-app .tagline { color: var(--muted); font-size: 12px; margin-top: 6px; }
-.invoice-app .invoice-heading { text-align: left; }
-.invoice-app .invoice-heading h1 { font-size: 25px; margin: 0 0 10px; }
-.invoice-app .ref {
-    display: inline-block; background: var(--navy); color: white;
-    padding: 8px 12px; border-radius: 6px; font-size: 13px;
-}
-.invoice-app .muted { color: var(--muted); }
-.invoice-app .section-title {
-    margin: 27px 0 13px; padding-right: 11px;
-    border-right: 4px solid var(--gold); font-size: 16px;
+
+.toolbar-title {
+    color: var(--navy);
+    font-size: 19px;
     font-weight: bold;
 }
-.invoice-app .info-grid {
-    display: grid; grid-template-columns: repeat(2,minmax(0,1fr));
+
+.btn {
+    border: 0;
+    border-radius: 8px;
+    padding: 10px 18px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+.btn-print {
+    background: var(--gold);
+    color: var(--navy);
+}
+
+.btn-back {
+    background: var(--navy);
+    color: white;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.invoice {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 10px 35px rgba(7, 20, 38, .09);
+}
+
+.invoice-header {
+    background: var(--navy);
+    color: white;
+    padding: 30px 34px;
+    border-bottom: 5px solid var(--gold);
+}
+
+.header-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 17px;
+}
+
+.logo {
+    width: 88px;
+    height: 88px;
+    background: white;
+    border-radius: 10px;
+    padding: 5px;
+    object-fit: contain;
+}
+
+.company-name {
+    font-size: 25px;
+    font-weight: bold;
+    color: var(--gold);
+    letter-spacing: .5px;
+}
+
+.company-subtitle {
+    color: #e4eaf2;
+    font-size: 13px;
+}
+
+.invoice-heading {
+    text-align: left;
+}
+
+.invoice-heading h1 {
+    margin: 0;
+    font-size: 29px;
+    color: white;
+}
+
+.invoice-heading p {
+    margin: 3px 0 0;
+    color: var(--gold-light);
+}
+
+.company-contact {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 20px;
+    margin-top: 24px;
+    padding-top: 18px;
+    border-top: 1px solid rgba(255,255,255,.18);
+    color: #f0f4f8;
+    font-size: 12px;
+}
+
+.company-contact strong {
+    color: var(--gold-light);
+}
+
+.invoice-body {
+    padding: 30px 34px;
+}
+
+.section-title {
+    color: var(--navy);
+    font-size: 16px;
+    font-weight: bold;
+    border-right: 4px solid var(--gold);
+    padding-right: 10px;
+    margin: 0 0 15px;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 28px;
+}
+
+.info-card {
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    min-width: 0;
+}
+
+.info-label {
+    color: var(--muted);
+    font-size: 11px;
+    margin-bottom: 3px;
+}
+
+.info-value {
+    font-weight: bold;
+    color: var(--navy);
+    overflow-wrap: anywhere;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 22px;
+}
+
+thead {
+    background: var(--navy2);
+    color: white;
+}
+
+th {
+    font-size: 12px;
+    font-weight: bold;
+    padding: 13px 10px;
+    text-align: right;
+}
+
+td {
+    padding: 13px 10px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+}
+
+tbody tr:last-child td {
+    border-bottom: 1px solid var(--border);
+}
+
+.amount {
+    direction: ltr;
+    unicode-bidi: embed;
+    white-space: nowrap;
+    font-weight: bold;
+}
+
+.totals-wrap {
+    display: flex;
+    justify-content: flex-start;
+    margin-bottom: 28px;
+}
+
+.totals {
+    width: 100%;
+    max-width: 390px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    overflow: hidden;
+}
+
+.total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    padding: 10px 15px;
+    border-bottom: 1px solid var(--border);
+}
+
+.total-row:last-child {
+    border-bottom: 0;
+}
+
+.total-row.final {
+    background: var(--navy);
+    color: white;
+    font-size: 17px;
+    font-weight: bold;
+}
+
+.total-row.remaining {
+    background: #fff8e8;
+    color: var(--navy);
+    font-weight: bold;
+}
+
+.payment-status {
+    display: inline-block;
+    border-radius: 20px;
+    padding: 3px 12px;
+    background: #e8f7ee;
+    color: #187343;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.payment-status.unpaid {
+    background: #fff0ee;
+    color: #b42318;
+}
+
+.payment-status.partial {
+    background: #fff5d8;
+    color: #8a5b00;
+}
+
+.bank-box {
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--gold);
+    border-radius: 9px;
+    padding: 18px;
+    margin-top: 20px;
+}
+
+.bank-title {
+    color: var(--navy);
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 12px;
+}
+
+.bank-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 12px;
 }
-.invoice-app .info-card {
-    padding: 16px; border: 1px solid var(--border);
-    border-radius: 9px; background: #fafbfd; min-width: 0;
+
+.bank-item {
+    border: 1px solid var(--border);
+    background: white;
+    padding: 11px;
+    border-radius: 7px;
+    min-width: 0;
 }
-.invoice-app .info-card h3 {
-    margin: 0 0 13px; font-size: 14px; color: var(--navy2);
+
+.bank-label {
+    color: var(--muted);
+    font-size: 11px;
+    margin-bottom: 5px;
 }
-.invoice-app .info-item { margin: 9px 0; font-size: 13px; overflow-wrap: anywhere; }
-.invoice-app .info-item strong { display: inline-block; min-width: 100px; }
-.invoice-app .table-wrap { overflow-x: auto; }
-.invoice-app table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-.invoice-app th {
-    background: var(--navy); color: white; padding: 13px 10px;
-    text-align: right; font-size: 12px; white-space: nowrap;
+
+.bank-value {
+    color: var(--navy);
+    font-weight: bold;
+    overflow-wrap: anywhere;
+    direction: ltr;
+    text-align: right;
+    unicode-bidi: plaintext;
+    font-size: 13px;
 }
-.invoice-app td {
-    padding: 13px 10px; border-bottom: 1px solid var(--border);
-    font-size: 13px; text-align: right;
-}
-.invoice-app .num { direction: ltr; unicode-bidi: embed; display: inline-block; }
-.invoice-app .edit-panel {
-    margin-top: 25px; padding: 20px; border: 1px solid #ead8a8;
-    border-radius: 11px; background: #fffcf4;
-}
-.invoice-app .edit-panel h3 { margin: 0 0 7px; font-size: 17px; }
-.invoice-app .edit-grid {
-    display: grid; grid-template-columns: repeat(2,minmax(0,1fr));
-    gap: 15px; margin-top: 18px;
-}
-.invoice-app .field label {
-    display: block; font-size: 12px; font-weight: bold;
-    margin-bottom: 7px;
-}
-.invoice-app .field input {
-    width: 100%; min-width: 0; padding: 11px;
-    border: 1px solid #d7dce5; border-radius: 7px;
-    background: white; color: var(--navy); font: inherit;
-}
-.invoice-app .field input:focus { outline: 2px solid #d9a83f66; border-color: var(--gold); }
-.invoice-app .help { font-size: 12px; line-height: 1.8; color: var(--muted); margin-top: 12px; }
-.invoice-app .totals {
-    width: 100%; max-width: 410px; margin: 22px 0 0 auto;
-    border: 1px solid var(--border); border-radius: 10px;
-    padding: 15px 18px;
-}
-.invoice-app .total-row {
-    display: flex; justify-content: space-between; gap: 15px;
-    padding: 11px 0; border-bottom: 1px solid var(--border);
-    font-size: 14px;
-}
-.invoice-app .total-row:last-child { border-bottom: 0; }
-.invoice-app .total-row.final {
-    margin-top: 4px; padding: 15px 0;
-    font-size: 19px; font-weight: bold; color: var(--navy);
-    border-bottom: 3px solid var(--gold);
-}
-.invoice-app .total-row.remaining { color: #b3261e; font-weight: bold; }
-.invoice-app .payment-status {
-    display: inline-block; border-radius: 20px; padding: 5px 11px;
-    font-size: 12px; background: #e8f6ed; color: #176b39; font-weight: bold;
-}
-.invoice-app .payment-status.pending { background: #fff0d5; color: #875500; }
-.invoice-app .payment-status.overpaid { background: #e8efff; color: #214eaa; }
-.invoice-app .footer {
-    margin-top: 35px; padding-top: 20px; text-align: center;
-    border-top: 1px dashed #ccd3df; line-height: 2; font-size: 12px;
+
+.bank-note {
+    margin-top: 12px;
+    font-size: 11px;
     color: var(--muted);
 }
-.invoice-app .footer strong { color: var(--navy); font-size: 14px; }
-@media(max-width:650px) {
-    .invoice-app .paper { padding: 18px; }
-    .invoice-app .header { flex-direction: column; align-items: stretch; }
-    .invoice-app .invoice-heading { text-align: right; }
-    .invoice-app .info-grid, .invoice-app .edit-grid { grid-template-columns: 1fr; }
-    .invoice-app .brand { flex-wrap: wrap; }
-    .invoice-app .company { font-size: 19px; }
+
+.footer {
+    background: #fbfcfe;
+    border-top: 1px solid var(--border);
+    padding: 22px 34px;
+    text-align: center;
 }
-@page { size: A4; margin: 12mm; }
+
+.footer-title {
+    color: var(--navy);
+    font-size: 15px;
+    font-weight: bold;
+}
+
+.footer-text {
+    color: var(--muted);
+    font-size: 11px;
+    margin-top: 5px;
+}
+
+.editor {
+    margin-top: 20px;
+    padding: 22px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+}
+
+.editor h2 {
+    margin: 0 0 5px;
+    color: var(--navy);
+    font-size: 17px;
+}
+
+.editor-help {
+    color: var(--muted);
+    font-size: 12px;
+    margin: 0 0 18px;
+}
+
+.editor-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.field label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.field input {
+    width: 100%;
+    border: 1px solid #ccd5e1;
+    border-radius: 7px;
+    padding: 11px;
+    font-family: inherit;
+    font-size: 14px;
+}
+
+.editor-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 18px;
+}
+
+.btn-reset {
+    background: #edf1f6;
+    color: var(--navy);
+}
+
+@media (max-width: 600px) {
+    body {
+        padding: 10px 5px;
+    }
+
+    .invoice-header,
+    .invoice-body,
+    .footer {
+        padding: 20px 15px;
+    }
+
+    .company-name {
+        font-size: 19px;
+    }
+
+    .invoice-heading {
+        text-align: right;
+    }
+
+    .invoice-heading h1 {
+        font-size: 24px;
+    }
+
+    .company-contact,
+    .info-grid,
+    .bank-grid,
+    .editor-grid {
+        grid-template-columns: 1fr;
+    }
+
+    table {
+        font-size: 11px;
+    }
+
+    th, td {
+        padding: 9px 5px;
+    }
+}
+
 @media print {
-    body { background: white !important; }
-    body * { visibility: hidden; }
-    #fortance-invoice, #fortance-invoice * { visibility: visible; }
-    #fortance-invoice {
-        position: absolute; top: 0; right: 0; width: 100%;
-        margin: 0; padding: 0;
+    @page {
+        size: A4;
+        margin: 10mm;
     }
-    .invoice-app .noprint { display: none !important; }
-    .invoice-app .paper {
-        max-width: none; margin: 0; padding: 0;
-        border: 0; border-top: 4px solid var(--gold);
-        border-radius: 0; box-shadow: none;
-    }
-    .invoice-app .info-card, .invoice-app th,
-    .invoice-app .ref, .invoice-app .totals {
-        -webkit-print-color-adjust: exact;
+
+    body {
+        background: white;
+        padding: 0;
         print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
     }
-    .invoice-app .info-grid, .invoice-app table,
-    .invoice-app .totals, .invoice-app .footer {
+
+    .page {
+        max-width: none;
+    }
+
+    .toolbar,
+    .editor {
+        display: none !important;
+    }
+
+    .invoice {
+        box-shadow: none;
+        border-radius: 0;
+    }
+
+    .invoice-header {
+        padding: 22px 25px;
+    }
+
+    .invoice-body {
+        padding: 22px 25px;
+    }
+
+    .footer {
+        padding: 15px 25px;
+    }
+
+    .info-card,
+    .bank-box,
+    .totals,
+    table,
+    .section-title {
         break-inside: avoid;
     }
 }
 </style>
+</head>
 
-<div class="invoice-app" id="fortance-invoice">
+<body>
+<div class="page">
 
-    <div class="toolbar noprint">
+    <div class="toolbar">
+        <div class="toolbar-title">نظام الفواتير | FORTANCE HOTELS</div>
         <div>
-            <h2>🧾 فاتورة FORTANCE HOTELS</h2>
-            <div class="muted" style="font-size:12px;margin-top:6px">
-                عدّل المبالغ ثم اطبع الفاتورة أو احفظها PDF
-            </div>
-        </div>
-        <div class="actions">
-            <button class="btn-gold" type="button" onclick="window.print()">🖨️ طباعة / PDF</button>
-            <button class="btn-light" type="button" onclick="window.history.back()">← رجوع</button>
+            <a href="/bookings" class="btn btn-back">العودة للحجوزات</a>
+            <button class="btn btn-print" onclick="window.print()">🖨️ طباعة / حفظ PDF</button>
         </div>
     </div>
 
-    <div class="paper">
+    <div class="invoice">
 
-        <div class="header">
-            <div class="brand">
-                <img src="/static/logo.jpg" class="logo"
-                     alt="FORTANCE HOTELS"
-                     onerror="this.style.display='none'">
+        <header class="invoice-header">
+            <div class="header-main">
+                <div class="brand">
+                    <img class="logo"
+                         src="/static/logo.jpg"
+                         alt="شعار FORTANCE HOTELS"
+                         onerror="this.style.display='none'">
+
+                    <div>
+                        <div class="company-name">
+                            {{ settings.company_name or "FORTANCE HOTELS" }}
+                        </div>
+                        <div class="company-subtitle">
+                            للضيافة الفندقية وإدارة الحجوزات
+                        </div>
+                    </div>
+                </div>
+
+                <div class="invoice-heading">
+                    <h1>فاتورة</h1>
+                    <p>INVOICE</p>
+                </div>
+            </div>
+
+            <div class="company-contact">
                 <div>
-                    <div class="company">{{ settings.company_name or 'FORTANCE HOTELS' }}</div>
-                    <div class="tagline">الضيافة الفندقية — Hospitality Management</div>
-                    <div class="muted" style="font-size:12px;margin-top:9px;line-height:1.9">
-                        {% if settings.company_phone %}الهاتف: {{ settings.company_phone }}<br>{% endif %}
-                        {% if settings.company_email %}البريد: {{ settings.company_email }}<br>{% endif %}
-                        {% if settings.company_address %}العنوان: {{ settings.company_address }}{% endif %}
+                    <strong>جوال الشركة:</strong>
+                    +966557963451
+                </div>
+                <div>
+                    <strong>البريد الإلكتروني:</strong>
+                    info@fortanceway.com
+                </div>
+                <div>
+                    <strong>رقم الحساب البنكي:</strong>
+                    <span dir="ltr">333000010006084854457</span>
+                </div>
+                <div>
+                    <strong>الرقم الضريبي:</strong>
+                    غير محدد
+                </div>
+                {% if settings.company_address %}
+                <div>
+                    <strong>العنوان:</strong>
+                    {{ settings.company_address }}
+                </div>
+                {% endif %}
+            </div>
+        </header>
+
+        <main class="invoice-body">
+
+            <h2 class="section-title">بيانات الفاتورة</h2>
+
+            <div class="info-grid">
+                <div class="info-card">
+                    <div class="info-label">رقم الفاتورة / الحجز</div>
+                    <div class="info-value">{{ b.code or b.id }}</div>
+                </div>
+
+                <div class="info-card">
+                    <div class="info-label">تاريخ إصدار الفاتورة</div>
+                    <div class="info-value">
+                        {{ b.created_at[:10] if b.created_at else "—" }}
+                    </div>
+                </div>
+
+                <div class="info-card">
+                    <div class="info-label">حالة الحجز</div>
+                    <div class="info-value">{{ b.status or "—" }}</div>
+                </div>
+            </div>
+
+            <h2 class="section-title">بيانات العميل والإقامة</h2>
+
+            <div class="info-grid">
+                <div class="info-card">
+                    <div class="info-label">اسم العميل</div>
+                    <div class="info-value">{{ b.customer or "—" }}</div>
+                </div>
+
+                <div class="info-card">
+                    <div class="info-label">رقم جوال العميل</div>
+                    <div class="info-value">{{ b.phone or "—" }}</div>
+                </div>
+
+                <div class="info-card">
+                    <div class="info-label">الفندق</div>
+                    <div class="info-value">{{ b.hotel or "—" }}</div>
+                </div>
+
+                <div class="info-card">
+                    <div class="info-label">المدينة</div>
+                    <div class="info-value">{{ b.city or "—" }}</div>
+                </div>
+
+                <div class="info-card">
+                    <div class="info-label">رقم الغرفة</div>
+                    <div class="info-value">{{ b.room or "—" }}</div>
+                </div>
+
+                <div class="info-card">
+                    <div class="info-label">نوع الغرفة</div>
+                    <div class="info-value">{{ b.room_type or "—" }}</div>
+                </div>
+
+                <div class="info-card">
+                    <div class="info-label">تاريخ الوصول</div>
+                    <div class="info-value">{{ b.checkin or "—" }}</div>
+                </div>
+
+                <div class="info-card">
+                    <div class="info-label">تاريخ المغادرة</div>
+                    <div class="info-value">{{ b.checkout or "—" }}</div>
+                </div>
+
+                <div class="info-card">
+                    <div class="info-label">عدد الليالي</div>
+                    <div class="info-value" id="nightsDisplay">
+                        {{ b.nights or 1 }}
                     </div>
                 </div>
             </div>
-            <div class="invoice-heading">
-                <h1>فاتورة حجز فندقي</h1>
-                <div class="ref">رقم الحجز: {{ b.code }}</div>
-                <div class="muted" style="font-size:12px;margin-top:10px">
-                    تاريخ الإصدار: {{ b.created_at[:10] if b.created_at else '—' }}
-                </div>
-            </div>
-        </div>
 
-        <div class="section-title">بيانات العميل والحجز</div>
+            <h2 class="section-title">تفاصيل الفاتورة</h2>
 
-        <div class="info-grid">
-            <div class="info-card">
-                <h3>👤 بيانات العميل</h3>
-                <div class="info-item"><strong>اسم العميل:</strong> {{ b.customer or '—' }}</div>
-                <div class="info-item"><strong>رقم الجوال:</strong> {{ b.phone or '—' }}</div>
-            </div>
-            <div class="info-card">
-                <h3>🏨 تفاصيل الإقامة</h3>
-                <div class="info-item"><strong>الفندق:</strong> {{ b.hotel or '—' }}{% if b.city %} — {{ b.city }}{% endif %}</div>
-                <div class="info-item"><strong>الغرفة:</strong> {{ b.room or '—' }}{% if b.room_type %} — {{ b.room_type }}{% endif %}</div>
-                <div class="info-item"><strong>تسجيل الدخول:</strong> {{ b.checkin or '—' }}</div>
-                <div class="info-item"><strong>تسجيل الخروج:</strong> {{ b.checkout or '—' }}</div>
-                <div class="info-item"><strong>عدد الليالي:</strong> <span id="night-count">{{ b.nights or 1 }}</span></div>
-                <div class="info-item"><strong>حالة الحجز:</strong>
-                    {% if b.status == 'cancelled' %}ملغى{% else %}مؤكد{% endif %}
-                </div>
-            </div>
-        </div>
-
-        <div class="section-title">تفاصيل الأسعار</div>
-
-        <div class="table-wrap">
             <table>
                 <thead>
                     <tr>
+                        <th style="width: 8%">م</th>
                         <th>البيان</th>
-                        <th>الكمية</th>
-                        <th>سعر الوحدة</th>
-                        <th>المبلغ</th>
+                        <th style="width: 17%">الكمية</th>
+                        <th style="width: 23%">المبلغ</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td>الإقامة الفندقية — {{ b.room or 'الغرفة' }}</td>
-                        <td><span id="table-nights">{{ b.nights or 1 }}</span> ليلة</td>
-                        <td><span id="table-rate"></span> {{ settings.currency or 'ر.س' }}</td>
-                        <td><strong><span id="table-subtotal"></span> {{ settings.currency or 'ر.س' }}</strong></td>
+                        <td>1</td>
+                        <td>
+                            <strong>إقامة فندقية</strong><br>
+                            <span style="color:#718096;font-size:11px">
+                                {{ b.hotel or "الفندق" }} — {{ b.room_type or "غرفة فندقية" }}
+                            </span>
+                        </td>
+                        <td id="quantityCell">{{ b.nights or 1 }} ليلة</td>
+                        <td class="amount" id="roomAmount">—</td>
                     </tr>
-                    <tr>
-                        <td>رسوم إضافية</td>
-                        <td>—</td>
-                        <td>—</td>
-                        <td><span id="table-extra"></span> {{ settings.currency or 'ر.س' }}</td>
+                    <tr id="extraRow" style="display:none">
+                        <td>2</td>
+                        <td>رسوم أو خدمات إضافية</td>
+                        <td>1</td>
+                        <td class="amount" id="extraCell">—</td>
                     </tr>
-                    <tr>
-                        <td>الخصم</td>
-                        <td>—</td>
-                        <td>—</td>
-                        <td><span id="table-discount"></span> {{ settings.currency or 'ر.س' }}</td>
+                    <tr id="discountRow" style="display:none">
+                        <td>3</td>
+                        <td>خصم</td>
+                        <td>1</td>
+                        <td class="amount" id="discountCell">—</td>
                     </tr>
                 </tbody>
             </table>
-        </div>
 
-        <div class="edit-panel noprint">
-            <h3>⚙️ التحكم في مبالغ الفاتورة</h3>
-            <div class="muted" style="font-size:12px;line-height:1.8">
-                غيّر الأسعار أدناه، وستتحدث الحسابات الظاهرة في الفاتورة تلقائيًا.
-            </div>
+            <div class="totals-wrap">
+                <div class="totals">
+                    <div class="total-row">
+                        <span>قيمة الإقامة</span>
+                        <strong class="amount" id="subtotalDisplay">—</strong>
+                    </div>
 
-            <div class="edit-grid">
-                <div class="field">
-                    <label for="nightly-rate">سعر الليلة الواحدة</label>
-                    <input id="nightly-rate" type="number" min="0" step="0.01">
+                    <div class="total-row">
+                        <span>الرسوم الإضافية</span>
+                        <strong class="amount" id="extraDisplay">—</strong>
+                    </div>
+
+                    <div class="total-row">
+                        <span>الخصم</span>
+                        <strong class="amount" id="discountDisplay">—</strong>
+                    </div>
+
+                    <div class="total-row final">
+                        <span>الإجمالي النهائي</span>
+                        <strong class="amount" id="totalDisplay">—</strong>
+                    </div>
+
+                    <div class="total-row">
+                        <span>المبلغ المدفوع</span>
+                        <strong class="amount" id="paidDisplay">—</strong>
+                    </div>
+
+                    <div class="total-row remaining">
+                        <span>المبلغ المتبقي</span>
+                        <strong class="amount" id="remainingDisplay">—</strong>
+                    </div>
+
+                    <div class="total-row">
+                        <span>حالة السداد</span>
+                        <span id="paymentStatus" class="payment-status">—</span>
+                    </div>
                 </div>
-                <div class="field">
-                    <label for="extra-charges">الرسوم الإضافية</label>
-                    <input id="extra-charges" type="number" min="0" step="0.01" value="0">
+            </div>
+
+            <section class="bank-box">
+                <div class="bank-title">بيانات التحويل البنكي للشركة</div>
+
+                <div class="bank-grid">
+                    <div class="bank-item">
+                        <div class="bank-label">رقم الحساب</div>
+                        <div class="bank-value">333000010006084854457</div>
+                    </div>
+
+                    <div class="bank-item">
+                        <div class="bank-label">رقم الآيبان IBAN</div>
+                        <div class="bank-value">SA8680000333608014854457</div>
+                    </div>
                 </div>
-                <div class="field">
-                    <label for="discount-amount">الخصم</label>
-                    <input id="discount-amount" type="number" min="0" step="0.01" value="0">
+
+                <div class="bank-note">
+                    يرجى التأكد من بيانات المستفيد قبل إجراء التحويل البنكي.
                 </div>
-                <div class="field">
-                    <label for="paid-amount">المبلغ المدفوع</label>
-                    <input id="paid-amount" type="number" min="0" step="0.01">
-                </div>
-            </div>
+            </section>
 
-            <div class="help">
-                الإجمالي = (سعر الليلة × عدد الليالي) + الرسوم الإضافية − الخصم.
-                <br>
-                تنبيه: التعديلات هنا للمعاينة والطباعة فقط، ولا تُحفظ في قاعدة البيانات تلقائيًا.
-            </div>
-        </div>
+        </main>
 
-        <div class="totals">
-            <div class="total-row">
-                <span>المجموع قبل الخصم</span>
-                <strong><span id="subtotal"></span> {{ settings.currency or 'ر.س' }}</strong>
+        <footer class="footer">
+            <div class="footer-title">شكرًا لاختياركم FORTANCE HOTELS</div>
+            <div class="footer-text">
+                للضيافة الفندقية وإدارة الحجوزات
             </div>
-            <div class="total-row">
-                <span>الرسوم الإضافية</span>
-                <strong><span id="extra-total"></span> {{ settings.currency or 'ر.س' }}</strong>
+            <div class="footer-text">
+                +966557963451 &nbsp; | &nbsp; info@fortanceway.com
             </div>
-            <div class="total-row">
-                <span>الخصم</span>
-                <strong>−<span id="discount-total"></span> {{ settings.currency or 'ر.س' }}</strong>
-            </div>
-            <div class="total-row final">
-                <span>الإجمالي النهائي</span>
-                <strong><span id="grand-total"></span> {{ settings.currency or 'ر.س' }}</strong>
-            </div>
-            <div class="total-row">
-                <span>المبلغ المدفوع</span>
-                <strong><span id="paid-total"></span> {{ settings.currency or 'ر.س' }}</strong>
-            </div>
-            <div class="total-row remaining">
-                <span>المتبقي</span>
-                <strong><span id="remaining-total"></span> {{ settings.currency or 'ر.س' }}</strong>
-            </div>
-            <div style="padding-top:15px">
-                <span id="payment-status" class="payment-status">حالة الدفع</span>
-            </div>
-        </div>
-
-        <div class="footer">
-            <strong>شكرًا لاختياركم {{ settings.company_name or 'FORTANCE HOTELS' }}</strong>
-            <br>نتمنى لكم إقامة سعيدة وتجربة مميزة.
-            {% if settings.company_phone %}
-            <br>للتواصل: {{ settings.company_phone }}
-            {% endif %}
-            <br><span style="font-size:11px">FORTANCE HOTELS · Hospitality with Excellence</span>
-        </div>
-
+        </footer>
     </div>
+
+    <section class="editor">
+        <h2>تعديل مبالغ الفاتورة</h2>
+        <p class="editor-help">
+            غيّر المبالغ أدناه لتحديث الإجمالي والمتبقي في المعاينة والطباعة.
+            هذه التعديلات لا تُحفظ في قاعدة البيانات.
+        </p>
+
+        <div class="editor-grid">
+            <div class="field">
+                <label for="rateInput">سعر الليلة الواحدة</label>
+                <input id="rateInput" type="number" min="0" step="0.01">
+            </div>
+
+            <div class="field">
+                <label for="extraInput">رسوم إضافية</label>
+                <input id="extraInput" type="number" min="0" step="0.01" value="0">
+            </div>
+
+            <div class="field">
+                <label for="discountInput">الخصم</label>
+                <input id="discountInput" type="number" min="0" step="0.01" value="0">
+            </div>
+
+            <div class="field">
+                <label for="paidInput">المبلغ المدفوع</label>
+                <input id="paidInput" type="number" min="0" step="0.01">
+            </div>
+        </div>
+
+        <div class="editor-actions">
+            <button type="button" class="btn btn-print" onclick="window.print()">
+                طباعة الفاتورة / حفظ PDF
+            </button>
+            <button type="button" class="btn btn-reset" onclick="resetAmounts()">
+                استعادة المبالغ الأصلية
+            </button>
+        </div>
+    </section>
+
 </div>
 
 <script>
 (function () {
-    const nights = Math.max(1, Number({{ b.nights or 1 }}) || 1);
-    const originalTotal = Math.max(0, Number({{ b.price or 0 }}) || 0);
-    const originalPaid = Math.max(0, Number({{ b.paid or 0 }}) || 0);
-    const initialRate = originalTotal / nights;
-    const currency = {{ (settings.currency or 'ر.س')|tojson }};
+    const originalPrice = Math.max(0, Number({{ (b.price or 0)|tojson }}) || 0);
+    const originalPaid = Math.max(0, Number({{ (b.paid or 0)|tojson }}) || 0);
+    const nights = Math.max(1, parseInt({{ (b.nights or 1)|tojson }}, 10) || 1);
+    const currency = {{ (settings.currency or "ريال")|tojson }};
 
-    const fields = {
-        rate: document.getElementById('nightly-rate'),
-        extra: document.getElementById('extra-charges'),
-        discount: document.getElementById('discount-amount'),
-        paid: document.getElementById('paid-amount')
-    };
+    const rateInput = document.getElementById("rateInput");
+    const extraInput = document.getElementById("extraInput");
+    const discountInput = document.getElementById("discountInput");
+    const paidInput = document.getElementById("paidInput");
 
-    fields.rate.value = initialRate.toFixed(2);
-    fields.paid.value = originalPaid.toFixed(2);
+    const originalRate = originalPrice / nights;
 
-    function number(input) {
+    rateInput.value = originalRate.toFixed(2);
+    paidInput.value = originalPaid.toFixed(2);
+
+    function num(input) {
         const value = Number(input.value);
         return Number.isFinite(value) ? Math.max(0, value) : 0;
     }
 
     function money(value) {
-        return Math.max(0, value).toLocaleString('en-US', {
+        return value.toLocaleString("en-US", {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
-        });
+        }) + " " + currency;
     }
 
-    function put(id, value) {
-        document.getElementById(id).textContent = money(value);
+    function setText(id, value) {
+        document.getElementById(id).textContent = value;
     }
 
-    function update() {
-        const rate = number(fields.rate);
-        const extra = number(fields.extra);
-        const discount = number(fields.discount);
-        const paid = number(fields.paid);
+    function updateInvoice() {
+        const rate = num(rateInput);
+        const extras = num(extraInput);
+        const discount = num(discountInput);
+        const paid = num(paidInput);
 
         const subtotal = rate * nights;
-        const total = Math.max(0, subtotal + extra - discount);
-        const remaining = total - paid;
+        const appliedDiscount = Math.min(discount, subtotal + extras);
+        const total = Math.max(0, subtotal + extras - appliedDiscount);
+        const remaining = Math.max(0, total - paid);
 
-        document.getElementById('night-count').textContent = nights;
-        document.getElementById('table-nights').textContent = nights;
+        setText("roomAmount", money(subtotal));
+        setText("quantityCell", nights + " ليلة");
+        setText("subtotalDisplay", money(subtotal));
+        setText("extraDisplay", money(extras));
+        setText("discountDisplay", money(appliedDiscount));
+        setText("totalDisplay", money(total));
+        setText("paidDisplay", money(paid));
+        setText("remainingDisplay", money(remaining));
 
-        put('table-rate', rate);
-        put('table-subtotal', subtotal);
-        put('table-extra', extra);
-        put('table-discount', discount);
-        put('subtotal', subtotal);
-        put('extra-total', extra);
-        put('discount-total', discount);
-        put('grand-total', total);
-        put('paid-total', paid);
-        put('remaining-total', Math.abs(remaining));
+        document.getElementById("extraRow").style.display =
+            extras > 0 ? "table-row" : "none";
+        document.getElementById("discountRow").style.display =
+            appliedDiscount > 0 ? "table-row" : "none";
 
-        const status = document.getElementById('payment-status');
-        if (remaining < -0.005) {
-            status.textContent = 'يوجد مبلغ زائد: ' + money(Math.abs(remaining)) + ' ' + currency;
-            status.className = 'payment-status overpaid';
-        } else if (remaining <= 0.005) {
-            status.textContent = 'مدفوع بالكامل';
-            status.className = 'payment-status';
+        setText("extraCell", money(extras));
+        setText("discountCell", money(appliedDiscount));
+
+        const status = document.getElementById("paymentStatus");
+        status.className = "payment-status";
+
+        if (remaining <= 0) {
+            status.textContent = "مدفوعة بالكامل";
         } else if (paid > 0) {
-            status.textContent = 'مدفوع جزئيًا';
-            status.className = 'payment-status pending';
+            status.textContent = "مدفوعة جزئيًا";
+            status.classList.add("partial");
         } else {
-            status.textContent = 'غير مدفوع';
-            status.className = 'payment-status pending';
+            status.textContent = "غير مدفوعة";
+            status.classList.add("unpaid");
         }
     }
 
-    Object.values(fields).forEach(function (field) {
-        field.addEventListener('input', update);
+    window.resetAmounts = function () {
+        rateInput.value = originalRate.toFixed(2);
+        extraInput.value = "0";
+        discountInput.value = "0";
+        paidInput.value = originalPaid.toFixed(2);
+        updateInvoice();
+    };
+
+    [rateInput, extraInput, discountInput, paidInput].forEach(function (input) {
+        input.addEventListener("input", updateInvoice);
     });
 
-    update();
+    updateInvoice();
 })();
 </script>
-{% endblock %}
+
+</body>
+</html>
