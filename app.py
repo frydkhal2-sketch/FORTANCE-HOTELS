@@ -18,7 +18,7 @@ app = Flask(
     static_folder=".",
     static_url_path="/static"
 )
-  
+
 
 app.secret_key = os.environ.get("FORTANCE_SECRET", secrets.token_hex(32))
 
@@ -164,6 +164,10 @@ def init_db():
             status TEXT NOT NULL DEFAULT 'confirmed',
             created_by INTEGER,
             created_at TEXT NOT NULL,
+            payment_method TEXT DEFAULT 'cash',
+            payment_url TEXT DEFAULT '',
+            company_id INTEGER,
+            group_booking_id INTEGER,
             FOREIGN KEY(customer_id) REFERENCES customers(id),
             FOREIGN KEY(hotel_id) REFERENCES hotels(id),
             FOREIGN KEY(room_id) REFERENCES rooms(id)
@@ -225,12 +229,13 @@ def init_db():
             status TEXT NOT NULL DEFAULT 'pending',
             reference TEXT,
             created_at TEXT NOT NULL,
-            created_by INTEGER
+            created_by INTEGER,
+            moyasar_invoice_id TEXT,
+            payment_status TEXT DEFAULT 'pending'
         );
         """
     )
 
-    # إضافة أعمدة جديدة للقاعدة الحالية بدون حذف البيانات القديمة.
     ensure_column(
         connection, "bookings", "payment_method",
         "TEXT DEFAULT 'cash'"
@@ -246,6 +251,14 @@ def init_db():
     ensure_column(
         connection, "bookings", "group_booking_id",
         "INTEGER"
+    )
+    ensure_column(
+        connection, "bookings", "moyasar_invoice_id",
+        "TEXT DEFAULT ''"
+    )
+    ensure_column(
+        connection, "bookings", "payment_status",
+        "TEXT DEFAULT 'pending'"
     )
 
     for key, value in DEFAULT_SETTINGS.items():
@@ -287,8 +300,6 @@ def init_db():
             ("فندق ريان الجوار", "مكة المكرمة", "")
         )
 
-    # إزالة الغرف التجريبية القديمة مرة واحدة فقط،
-    # وفقط إذا لم توجد حجوزات حالية مرتبطة بها.
     cleanup = connection.execute(
         """
         SELECT value
@@ -856,7 +867,7 @@ def rooms():
         FROM rooms r
         JOIN hotels h
             ON h.id=r.hotel_id
-        WHERE (?='' OR r.hotel_id=?)
+        WHERE (?='' OR r.hotel_id=? )
         ORDER BY h.name,r.number
         """,
         (
@@ -992,9 +1003,10 @@ def room_status(rid):
         )
 
     connection = db()
-connection.execute(
-    "UPDATE rooms SET status=? WHERE id=?",
-    (status, rid))
+    connection.execute(
+        "UPDATE rooms SET status=? WHERE id=?",
+        (status, rid)
+    )
 
     connection.commit()
     connection.close()
@@ -1062,8 +1074,7 @@ def bookings():
             connection.close()
 
             flash(
-                "تاريخ الخروج يجب أن يكون "
-                "بعد تاريخ الدخول.",
+                "تاريخ الخروج يجب أن يكون بعد تاريخ الدخول.",
                 "error"
             )
 
@@ -1072,16 +1083,13 @@ def bookings():
             )
 
         room = connection.execute(
-            
+            """
             SELECT *
             FROM rooms
             WHERE id=?
             AND hotel_id=?
-            
-            (
-                room_id,
-                hotel_id
-            )
+            """,
+            (room_id, hotel_id)
         ).fetchone()
 
         if not room:
@@ -1129,8 +1137,7 @@ def bookings():
             connection.close()
 
             flash(
-                "هذه الغرفة محجوزة في الفترة "
-                "المحددة. اختر غرفة أو تاريخًا آخر.",
+                "هذه الغرفة محجوزة في الفترة المحددة. اختر غرفة أو تاريخًا آخر.",
                 "error"
             )
 
@@ -1139,12 +1146,12 @@ def bookings():
             )
 
         customer = connection.execute(
-            
+            """
             SELECT id
             FROM customers
             WHERE phone=?
             AND phone!=''
-            
+            """,
             (phone,)
         ).fetchone()
 
@@ -1152,11 +1159,11 @@ def bookings():
             customer_id = customer["id"]
 
             connection.execute(
-                
+                """
                 UPDATE customers
                 SET name=?
                 WHERE id=?
-                
+                """,
                 (
                     name,
                     customer_id
@@ -1165,7 +1172,7 @@ def bookings():
 
         else:
             cursor = connection.execute(
-                
+                """
                 INSERT INTO customers(
                     name,
                     phone,
@@ -1173,11 +1180,11 @@ def bookings():
                     created_at
                 )
                 VALUES(?,?,?,?)
-                
+                """,
                 (
                     name,
                     phone,
-                
+                    "",
                     datetime.now().isoformat()
                 )
             )
@@ -1215,11 +1222,11 @@ def bookings():
 
         payment_url = request.form.get(
             "payment_url",
-        
+            ""
         ).strip()
 
         cursor = connection.execute(
-            
+            """
             INSERT INTO bookings(
                 code,
                 customer_id,
@@ -1237,7 +1244,7 @@ def bookings():
                 payment_url
             )
             VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-        
+            """,
             (
                 code,
                 customer_id,
@@ -1259,17 +1266,17 @@ def bookings():
         booking_id = cursor.lastrowid
 
         connection.execute(
-            
+            """
             UPDATE rooms
             SET status='booked'
             WHERE id=?
-            
+            """,
             (room_id,)
         )
 
         if paid > 0:
             connection.execute(
-                
+                """
                 INSERT INTO payments(
                     booking_id,
                     amount,
@@ -1280,7 +1287,7 @@ def bookings():
                     created_by
                 )
                 VALUES(?,?,?,?,?,?,?)
-                
+                """,
                 (
                     booking_id,
                     paid,
@@ -1305,7 +1312,7 @@ def bookings():
         )
 
     rows = connection.execute(
-        
+        """
         SELECT
             b.*,
             cu.name AS customer,
@@ -1321,20 +1328,20 @@ def bookings():
         JOIN rooms r
             ON r.id=b.room_id
         ORDER BY b.id DESC
-        
+        """
     ).fetchall()
 
     hotels_list = connection.execute(
-        
+        """
         SELECT *
         FROM hotels
         WHERE active=1
         ORDER BY name
-        
+        """
     ).fetchall()
 
     rooms_list = connection.execute(
-        
+        """
         SELECT *
         FROM rooms
         WHERE status NOT IN(
@@ -1343,7 +1350,7 @@ def bookings():
             'cleaning'
         )
         ORDER BY hotel_id,number
-    
+        """
     ).fetchall()
 
     connection.close()
@@ -1365,11 +1372,11 @@ def cancel_booking(bid):
     connection = db()
 
     booking = connection.execute(
-    
+        """
         SELECT *
         FROM bookings
         WHERE id=?
-        
+        """,
         (bid,)
     ).fetchone()
 
@@ -1398,21 +1405,21 @@ def cancel_booking(bid):
         )
 
     connection.execute(
-        
+        """
         UPDATE bookings
         SET status='cancelled'
         WHERE id=?
-        
+        """,
         (bid,)
     )
 
     connection.execute(
-        
+        """
         UPDATE rooms
         SET status='available'
         WHERE id=?
         AND status='booked'
-        
+        """,
         (booking["room_id"],)
     )
 
@@ -1515,8 +1522,7 @@ def group_bookings():
             connection.close()
 
             flash(
-                "أدخل اسم المجموعة والتواريخ "
-                "واختر غرفة واحدة على الأقل.",
+                "أدخل اسم المجموعة والتواريخ واختر غرفة واحدة على الأقل.",
                 "error"
             )
 
@@ -1529,12 +1535,12 @@ def group_bookings():
 
         for rid in room_ids:
             room = connection.execute(
-                
+                """
                 SELECT *
                 FROM rooms
                 WHERE id=?
                 AND hotel_id=?
-                
+                """,
                 (
                     rid,
                     hotel_id
@@ -1586,8 +1592,7 @@ def group_bookings():
                 connection.close()
 
                 flash(
-                    f"الغرفة {room['number']} "
-                    "متعارضة مع حجز آخر.",
+                    f"الغرفة {room['number']} متعارضة مع حجز آخر.",
                     "error"
                 )
 
@@ -1621,7 +1626,7 @@ def group_bookings():
         )
 
         cursor = connection.execute(
-        
+            """
             INSERT INTO group_bookings(
                 code,
                 group_name,
@@ -1641,7 +1646,7 @@ def group_bookings():
                 created_at
             )
             VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-            
+            """,
             (
                 code,
                 group_name,
@@ -1666,14 +1671,14 @@ def group_bookings():
 
         for room in valid_rooms:
             connection.execute(
-                
+                """
                 INSERT INTO group_booking_rooms(
                     group_booking_id,
                     room_id,
                     price
                 )
                 VALUES(?,?,?)
-                
+                """,
                 (
                     group_id,
                     room["id"],
@@ -1682,17 +1687,17 @@ def group_bookings():
             )
 
             connection.execute(
-                
+                """
                 UPDATE rooms
                 SET status='booked'
                 WHERE id=?
-                
+                """,
                 (room["id"],)
             )
 
         if paid > 0:
             connection.execute(
-                
+                """
                 INSERT INTO payments(
                     group_booking_id,
                     amount,
@@ -1703,7 +1708,7 @@ def group_bookings():
                     created_by
                 )
                 VALUES(?,?,?,?,?,?,?)
-                
+                """,
                 (
                     group_id,
                     paid,
@@ -1725,8 +1730,7 @@ def group_bookings():
         connection.close()
 
         flash(
-            f"تم إنشاء حجز المجموعة {code} "
-            f"لعدد {len(valid_rooms)} غرفة.",
+            f"تم إنشاء حجز المجموعة {code} لعدد {len(valid_rooms)} غرفة.",
             "ok"
         )
 
@@ -1735,7 +1739,7 @@ def group_bookings():
         )
 
     rows = connection.execute(
-        
+        """
         SELECT
             gb.*,
             h.name AS hotel,
@@ -1746,29 +1750,29 @@ def group_bookings():
         LEFT JOIN companies c
             ON c.id=gb.company_id
         ORDER BY gb.id DESC
-        
+        """
     ).fetchall()
 
     hotels_list = connection.execute(
-        
+        """
         SELECT *
         FROM hotels
         WHERE active=1
         ORDER BY name
-        
+        """
     ).fetchall()
 
     companies_list = connection.execute(
-        
+        """
         SELECT *
         FROM companies
         WHERE active=1
         ORDER BY name
-        
+        """
     ).fetchall()
 
     rooms_list = connection.execute(
-        
+        """
         SELECT
             r.*,
             h.name AS hotel
@@ -1781,7 +1785,7 @@ def group_bookings():
             'cleaning'
         )
         ORDER BY h.name,r.number
-        
+        """
     ).fetchall()
 
     connection.close()
@@ -1804,11 +1808,11 @@ def cancel_group_booking(gid):
     connection = db()
 
     group = connection.execute(
-        
+        """
         SELECT *
         FROM group_bookings
         WHERE id=?
-        
+        """,
         (gid,)
     ).fetchone()
 
@@ -1825,11 +1829,11 @@ def cancel_group_booking(gid):
         )
 
     connection.execute(
-        
+        """
         UPDATE group_bookings
         SET status='cancelled'
         WHERE id=?
-    
+        """,
         (gid,)
     )
 
@@ -1838,7 +1842,7 @@ def cancel_group_booking(gid):
         SELECT room_id
         FROM group_booking_rooms
         WHERE group_booking_id=?
-        
+        """,
         (gid,)
     ).fetchall()
 
@@ -1846,7 +1850,7 @@ def cancel_group_booking(gid):
         rid = row["room_id"]
 
         still_used = connection.execute(
-            
+            """
             SELECT 1
             FROM bookings
             WHERE room_id=?
@@ -1854,7 +1858,7 @@ def cancel_group_booking(gid):
             AND checkin < ?
             AND checkout > ?
             LIMIT 1
-            
+            """,
             (
                 rid,
                 group["checkout"],
@@ -1864,12 +1868,12 @@ def cancel_group_booking(gid):
 
         if not still_used:
             connection.execute(
-                
+                """
                 UPDATE rooms
                 SET status='available'
                 WHERE id=?
                 AND status='booked'
-            
+                """,
                 (rid,)
             )
 
@@ -1896,7 +1900,7 @@ def companies():
 
     if request.method == "POST":
         connection.execute(
-        
+            """
             INSERT INTO companies(
                 name,
                 contact_name,
@@ -1907,29 +1911,14 @@ def companies():
                 created_at
             )
             VALUES(?,?,?,?,?,?,?)
-            
+            """,
             (
                 request.form["name"].strip(),
-                request.form.get(
-                    "contact_name",
-                    
-                ).strip(),
-                request.form.get(
-                    "phone",
-                    
-                ).strip(),
-                request.form.get(
-                    "email",
-                    
-                ).strip(),
-                request.form.get(
-                    "tax_number",
-                    
-                ).strip(),
-                request.form.get(
-                    "notes",
-                    
-                ).strip(),
+                request.form.get("contact_name", "").strip(),
+                request.form.get("phone", "").strip(),
+                request.form.get("email", "").strip(),
+                request.form.get("tax_number", "").strip(),
+                request.form.get("notes", "").strip(),
                 datetime.now().isoformat()
             )
         )
@@ -1946,7 +1935,7 @@ def companies():
         SELECT *
         FROM companies
         ORDER BY id DESC
-        
+        """
     ).fetchall()
 
     connection.close()
@@ -1981,7 +1970,7 @@ def invoice(bid):
         JOIN rooms r
             ON r.id=b.room_id
         WHERE b.id=?
-        
+        """,
         (bid,)
     ).fetchone()
 
@@ -2016,12 +2005,12 @@ def seasons():
 
     if request.method == "POST":
         connection.execute(
-            
+            """
             INSERT INTO seasons(
                 name,start_date,end_date,notes
             )
             VALUES(?,?,?,?)
-            
+            """,
             (
                 request.form["name"],
                 request.form["start_date"],
@@ -2041,11 +2030,11 @@ def seasons():
         )
 
     rows = connection.execute(
-        
+        """
         SELECT *
         FROM seasons
         ORDER BY start_date DESC
-        
+        """
     ).fetchall()
 
     connection.close()
@@ -2091,7 +2080,7 @@ def reports():
             ON b.hotel_id=h.id
         GROUP BY h.id
         ORDER BY h.name
-        
+        """
     ).fetchall()
 
     connection.close()
@@ -2146,12 +2135,6 @@ def settings():
         settings=settings_data
     )
 
-
-@app.route(
-    "/payments/link/<int:bid>",
-    methods=["POST"]
-)
-@login_required
 
 def moyasar_get_invoice(invoice_id):
     secret = os.environ.get("MOYASAR_SECRET_KEY", "").strip()
@@ -2471,3 +2454,8 @@ def moyasar_return():
 
     return redirect(url_for("bookings"))
 
+
+init_db()
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
