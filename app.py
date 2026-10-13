@@ -993,14 +993,12 @@ def room_status(rid):
 
     connection = db()
 
-    connection.execute(
-        
-        UPDATE rooms
-        SET status=?
-        WHERE id=?
-        
-        (status, rid)
-    )
+connection.execute(
+    "UPDATE rooms SET status=? WHERE id=?",
+    (status, rid)
+)
+
+   
 
     connection.commit()
     connection.close()
