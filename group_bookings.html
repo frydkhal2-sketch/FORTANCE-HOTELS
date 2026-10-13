@@ -1,0 +1,259 @@
+
+{% extends "base.html" %}
+
+{% block title %}حجوزات المجموعات | FORTANCE HOTELS{% endblock %}
+
+{% block content %}
+
+<style>
+.group-page{direction:rtl;color:#172033}
+.group-header{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:22px}
+.group-header h1{margin:0 0 8px;font-size:25px}
+.group-header p{margin:0;line-height:1.8;color:#68758a}
+.group-card{background:#fff;border:1px solid #e5eaf1;border-radius:16px;padding:22px;margin-bottom:22px;box-shadow:0 5px 18px #10284408}
+.group-card h2{font-size:19px;margin:0 0 8px}
+.group-muted{color:#68758a;font-size:13px;line-height:1.8;margin-bottom:18px}
+.group-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.group-field label{display:block;font-weight:700;color:#53627a;margin-bottom:7px}
+.group-field input,.group-field select,.group-field textarea{width:100%;box-sizing:border-box;min-height:44px;padding:11px;border:1px solid #dbe2ec;border-radius:9px;background:#fff;font:inherit}
+.group-field textarea{min-height:85px;resize:vertical}
+.group-field input:focus,.group-field select:focus,.group-field textarea:focus{outline:2px solid #d9a83f45;border-color:#d9a83f}
+.group-wide{grid-column:1/-1}
+.group-rooms{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
+.group-room{display:flex;align-items:flex-start;gap:10px;border:1px solid #e2e8f0;border-radius:11px;padding:13px;background:#fbfcfe}
+.group-room input{width:18px;height:18px;min-height:18px;margin-top:3px;accent-color:#b58a2a}
+.group-room span{line-height:1.8}
+.group-room small{display:block;color:#68758a}
+.group-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
+.group-btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:9px;padding:12px 18px;background:#0b2340;color:#fff;text-decoration:none;font:inherit;font-weight:700;cursor:pointer}
+.group-btn.gold{background:#d9a83f;color:#172033}
+.group-btn.light{background:#edf1f6;color:#243247}
+.group-table-wrap{overflow-x:auto}
+.group-table{width:100%;min-width:850px;border-collapse:collapse}
+.group-table th,.group-table td{text-align:right;padding:12px;border-bottom:1px solid #edf0f5;vertical-align:top}
+.group-table th{background:#f4f7fb;color:#4c5b70;font-size:12px}
+.group-tag{display:inline-block;border-radius:20px;padding:5px 9px;background:#e8f3ff;color:#1d4ed8;font-size:12px;font-weight:700}
+.group-empty{text-align:center;padding:28px;color:#68758a}
+.group-alert{padding:12px;border-radius:10px;background:#fff8e6;color:#805b00;line-height:1.8;margin-bottom:16px}
+@media(max-width:650px){.group-grid{grid-template-columns:1fr}.group-wide{grid-column:auto}.group-card{padding:15px}.group-header h1{font-size:21px}}
+</style>
+
+<div class="group-page">
+    <div class="group-header">
+        <div>
+            <h1>👥 حجوزات المجموعات</h1>
+            <p>إدارة حجوزات الوفود والشركات وتخصيص عدة غرف للحجز الواحد.</p>
+        </div>
+        <a href="#new-group" class="group-btn gold">＋ حجز مجموعة جديد</a>
+    </div>
+
+    <div class="group-card" id="new-group">
+        <h2>➕ تسجيل حجز مجموعة</h2>
+        <div class="group-muted">
+            أدخل بيانات المجموعة، وحدد الفندق والغرف وتواريخ الإقامة.
+            الغرف المتاحة للاختيار تظهر أدناه.
+        </div>
+
+        <form method="post">
+            <div class="group-grid">
+                <div class="group-field">
+                    <label for="group_name">اسم المجموعة أو الوفد *</label>
+                    <input id="group_name" name="group_name" required
+                           placeholder="مثال: وفد شركة ...">
+                </div>
+
+                <div class="group-field">
+                    <label for="company_id">الشركة</label>
+                    <select id="company_id" name="company_id">
+                        <option value="">بدون شركة محددة</option>
+                        {% for c in companies %}
+                        <option value="{{ c.id }}">{{ c.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="group-field">
+                    <label for="contact_name">اسم مسؤول المجموعة</label>
+                    <input id="contact_name" name="contact_name"
+                           placeholder="اسم المسؤول">
+                </div>
+
+                <div class="group-field">
+                    <label for="phone">رقم التواصل</label>
+                    <input id="phone" name="phone" type="tel"
+                           placeholder="05xxxxxxxx">
+                </div>
+
+                <div class="group-field">
+                    <label for="hotel_id">الفندق *</label>
+                    <select id="hotel_id" name="hotel_id" required>
+                        <option value="">اختر الفندق</option>
+                        {% for h in hotels %}
+                        <option value="{{ h.id }}">{{ h.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="group-field">
+                    <label for="guests">عدد الأشخاص</label>
+                    <input id="guests" name="guests" type="number"
+                           min="1" value="1">
+                </div>
+
+                <div class="group-field">
+                    <label for="checkin">تاريخ الدخول *</label>
+                    <input id="checkin" name="checkin" type="date" required>
+                </div>
+
+                <div class="group-field">
+                    <label for="checkout">تاريخ الخروج *</label>
+                    <input id="checkout" name="checkout" type="date" required>
+                </div>
+
+                <div class="group-field group-wide">
+                    <label>اختر الغرف المطلوبة *</label>
+                    <div class="group-muted">
+                        يمكنك تحديد أكثر من غرفة. راجع الفندق والتواريخ قبل الحفظ.
+                    </div>
+
+                    {% if rooms %}
+                    <div class="group-rooms">
+                        {% for r in rooms %}
+                        <label class="group-room">
+                            <input type="checkbox" name="room_ids"
+                                   value="{{ r.id }}">
+                            <span>
+                                <strong>غرفة {{ r.number }}</strong>
+                                <small>{{ r.room_type }} · {{ r.price }} ر.س لليلة</small>
+                            </span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="group-alert">
+                        لا توجد غرف مسجلة للاختيار. أضف الغرف أولًا من صفحة الغرف.
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="group-field">
+                    <label for="paid">المبلغ المدفوع (ريال)</label>
+                    <input id="paid" name="paid" type="number"
+                           min="0" step="0.01" value="0">
+                </div>
+
+                <div class="group-field">
+                    <label for="payment_method">طريقة الدفع</label>
+                    <select id="payment_method" name="payment_method">
+                        <option value="cash">نقدي</option>
+                        <option value="card">بطاقة</option>
+                        <option value="transfer">تحويل بنكي</option>
+                    </select>
+                </div>
+
+                <div class="group-field group-wide">
+                    <label for="notes">ملاحظات</label>
+                    <textarea id="notes" name="notes"
+                              placeholder="أي تفاصيل إضافية عن المجموعة أو الحجز"></textarea>
+                </div>
+            </div>
+
+            <div class="group-actions">
+                <button type="submit" class="group-btn gold">✓ حفظ حجز المجموعة</button>
+                <a href="{{ url_for('group_bookings') }}" class="group-btn light">إعادة تحميل الصفحة</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="group-card">
+        <h2>📋 الحجوزات المسجلة</h2>
+        <div class="group-muted">راجع بيانات المجموعات وتواريخ الإقامة وحالة الحجز.</div>
+
+        {% if group_bookings %}
+        <div class="group-table-wrap">
+            <table class="group-table">
+                <thead>
+                    <tr>
+                        <th>المجموعة</th>
+                        <th>الشركة</th>
+                        <th>الفندق</th>
+                        <th>مسؤول التواصل</th>
+                        <th>الدخول</th>
+                        <th>الخروج</th>
+                        <th>عدد الأشخاص</th>
+                        <th>الإجمالي</th>
+                        <th>المدفوع</th>
+                        <th>الحالة</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for g in group_bookings %}
+                    <tr>
+                        <td><strong>{{ g.group_name|default('—', true) }}</strong></td>
+                        <td>{{ g.company_name|default('—', true) }}</td>
+                        <td>{{ g.hotel_name|default('—', true) }}</td>
+                        <td>
+                            {{ g.contact_name|default('—', true) }}
+                            {% if g.phone %}
+                            <br><small>{{ g.phone }}</small>
+                            {% endif %}
+                        </td>
+                        <td>{{ g.checkin|default('—', true) }}</td>
+                        <td>{{ g.checkout|default('—', true) }}</td>
+                        <td>{{ g.guests|default(0, true) }}</td>
+                        <td>{{ "%.2f"|format(g.total_price|default(0, true)|float) }} ر.س</td>
+                        <td>{{ "%.2f"|format(g.paid|default(0, true)|float) }} ر.س</td>
+                        <td>
+                            {% if g.status|default('', true) == 'cancelled' %}
+                            <span class="group-tag" style="background:#fee2e2;color:#991b1b">ملغي</span>
+                            {% else %}
+                            <span class="group-tag">مسجل</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="group-empty">
+            <div style="font-size:35px">👥</div>
+            <strong>لا توجد حجوزات مجموعات حتى الآن</strong>
+            <p>أضف أول حجز باستخدام النموذج أعلاه.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+(function () {
+    const hotel = document.getElementById("hotel_id");
+    const checkin = document.getElementById("checkin");
+    const checkout = document.getElementById("checkout");
+
+    function validateDates() {
+        if (checkin.value && checkout.value) {
+            checkout.min = checkin.value;
+            if (checkout.value <= checkin.value) {
+                checkout.setCustomValidity("تاريخ الخروج يجب أن يكون بعد تاريخ الدخول.");
+            } else {
+                checkout.setCustomValidity("");
+            }
+        }
+    }
+
+    checkin.addEventListener("change", validateDates);
+    checkout.addEventListener("change", validateDates);
+
+    // تنبيه فقط: تحديد الفندق هنا لا يغير الغرف تلقائيًا.
+    // التحقق النهائي من توفر الغرف يجب أن يتم على الخادم.
+    hotel.addEventListener("change", function () {
+        const selected = hotel.options[hotel.selectedIndex].text;
+        if (hotel.value) {
+            console.info("الفندق المحدد:", selected);
+        }
+    });
+})();
+</script>
+
+{% endblock %}
