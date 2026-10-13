@@ -12,7 +12,7 @@ BASE = os.path.dirname(__file__)
 DB = os.path.join(BASE, "fortans.db")
 
 app = Flask(
-    __name__,
+    __name__
     template_folder=".",
     static_folder=".",
     static_url_path="/static"
@@ -992,11 +992,11 @@ def room_status(rid):
     connection = db()
 
     connection.execute(
-        """
+        
         UPDATE rooms
         SET status=?
         WHERE id=?
-        """,
+        
         (status, rid)
     )
 
@@ -1076,12 +1076,12 @@ def bookings():
             )
 
         room = connection.execute(
-            """
+            
             SELECT *
             FROM rooms
             WHERE id=?
             AND hotel_id=?
-            """,
+            
             (
                 room_id,
                 hotel_id
@@ -1143,12 +1143,12 @@ def bookings():
             )
 
         customer = connection.execute(
-            """
+            
             SELECT id
             FROM customers
             WHERE phone=?
             AND phone!=''
-            """,
+            
             (phone,)
         ).fetchone()
 
@@ -1156,11 +1156,11 @@ def bookings():
             customer_id = customer["id"]
 
             connection.execute(
-                """
+                
                 UPDATE customers
                 SET name=?
                 WHERE id=?
-                """,
+                
                 (
                     name,
                     customer_id
@@ -1169,7 +1169,7 @@ def bookings():
 
         else:
             cursor = connection.execute(
-                """
+                
                 INSERT INTO customers(
                     name,
                     phone,
@@ -1177,11 +1177,11 @@ def bookings():
                     created_at
                 )
                 VALUES(?,?,?,?)
-                """,
+                
                 (
                     name,
                     phone,
-                    "",
+                
                     datetime.now().isoformat()
                 )
             )
@@ -1219,11 +1219,11 @@ def bookings():
 
         payment_url = request.form.get(
             "payment_url",
-            ""
+        
         ).strip()
 
         cursor = connection.execute(
-            """
+            
             INSERT INTO bookings(
                 code,
                 customer_id,
@@ -1241,7 +1241,7 @@ def bookings():
                 payment_url
             )
             VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-            """,
+        
             (
                 code,
                 customer_id,
@@ -1263,17 +1263,17 @@ def bookings():
         booking_id = cursor.lastrowid
 
         connection.execute(
-            """
+            
             UPDATE rooms
             SET status='booked'
             WHERE id=?
-            """,
+            
             (room_id,)
         )
 
         if paid > 0:
             connection.execute(
-                """
+                
                 INSERT INTO payments(
                     booking_id,
                     amount,
@@ -1284,7 +1284,7 @@ def bookings():
                     created_by
                 )
                 VALUES(?,?,?,?,?,?,?)
-                """,
+                
                 (
                     booking_id,
                     paid,
@@ -1309,7 +1309,7 @@ def bookings():
         )
 
     rows = connection.execute(
-        """
+        
         SELECT
             b.*,
             cu.name AS customer,
@@ -1325,20 +1325,20 @@ def bookings():
         JOIN rooms r
             ON r.id=b.room_id
         ORDER BY b.id DESC
-        """
+        
     ).fetchall()
 
     hotels_list = connection.execute(
-        """
+        
         SELECT *
         FROM hotels
         WHERE active=1
         ORDER BY name
-        """
+        
     ).fetchall()
 
     rooms_list = connection.execute(
-        """
+        
         SELECT *
         FROM rooms
         WHERE status NOT IN(
@@ -1347,7 +1347,7 @@ def bookings():
             'cleaning'
         )
         ORDER BY hotel_id,number
-        """
+    
     ).fetchall()
 
     connection.close()
@@ -1369,11 +1369,11 @@ def cancel_booking(bid):
     connection = db()
 
     booking = connection.execute(
-        """
+    
         SELECT *
         FROM bookings
         WHERE id=?
-        """,
+        
         (bid,)
     ).fetchone()
 
@@ -1402,21 +1402,21 @@ def cancel_booking(bid):
         )
 
     connection.execute(
-        """
+        
         UPDATE bookings
         SET status='cancelled'
         WHERE id=?
-        """,
+        
         (bid,)
     )
 
     connection.execute(
-        """
+        
         UPDATE rooms
         SET status='available'
         WHERE id=?
         AND status='booked'
-        """,
+        
         (booking["room_id"],)
     )
 
@@ -1533,12 +1533,12 @@ def group_bookings():
 
         for rid in room_ids:
             room = connection.execute(
-                """
+                
                 SELECT *
                 FROM rooms
                 WHERE id=?
                 AND hotel_id=?
-                """,
+                
                 (
                     rid,
                     hotel_id
@@ -1625,7 +1625,7 @@ def group_bookings():
         )
 
         cursor = connection.execute(
-            """
+        
             INSERT INTO group_bookings(
                 code,
                 group_name,
@@ -1645,7 +1645,7 @@ def group_bookings():
                 created_at
             )
             VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-            """,
+            
             (
                 code,
                 group_name,
@@ -1670,14 +1670,14 @@ def group_bookings():
 
         for room in valid_rooms:
             connection.execute(
-                """
+                
                 INSERT INTO group_booking_rooms(
                     group_booking_id,
                     room_id,
                     price
                 )
                 VALUES(?,?,?)
-                """,
+                
                 (
                     group_id,
                     room["id"],
@@ -1686,17 +1686,17 @@ def group_bookings():
             )
 
             connection.execute(
-                """
+                
                 UPDATE rooms
                 SET status='booked'
                 WHERE id=?
-                """,
+                
                 (room["id"],)
             )
 
         if paid > 0:
             connection.execute(
-                """
+                
                 INSERT INTO payments(
                     group_booking_id,
                     amount,
@@ -1707,7 +1707,7 @@ def group_bookings():
                     created_by
                 )
                 VALUES(?,?,?,?,?,?,?)
-                """,
+                
                 (
                     group_id,
                     paid,
@@ -1739,7 +1739,7 @@ def group_bookings():
         )
 
     rows = connection.execute(
-        """
+        
         SELECT
             gb.*,
             h.name AS hotel,
@@ -1750,29 +1750,29 @@ def group_bookings():
         LEFT JOIN companies c
             ON c.id=gb.company_id
         ORDER BY gb.id DESC
-        """
+        
     ).fetchall()
 
     hotels_list = connection.execute(
-        """
+        
         SELECT *
         FROM hotels
         WHERE active=1
         ORDER BY name
-        """
+        
     ).fetchall()
 
     companies_list = connection.execute(
-        """
+        
         SELECT *
         FROM companies
         WHERE active=1
         ORDER BY name
-        """
+        
     ).fetchall()
 
     rooms_list = connection.execute(
-        """
+        
         SELECT
             r.*,
             h.name AS hotel
@@ -1785,7 +1785,7 @@ def group_bookings():
             'cleaning'
         )
         ORDER BY h.name,r.number
-        """
+        
     ).fetchall()
 
     connection.close()
@@ -1808,11 +1808,11 @@ def cancel_group_booking(gid):
     connection = db()
 
     group = connection.execute(
-        """
+        
         SELECT *
         FROM group_bookings
         WHERE id=?
-        """,
+        
         (gid,)
     ).fetchone()
 
@@ -1829,11 +1829,11 @@ def cancel_group_booking(gid):
         )
 
     connection.execute(
-        """
+        
         UPDATE group_bookings
         SET status='cancelled'
         WHERE id=?
-        """,
+    
         (gid,)
     )
 
@@ -1842,7 +1842,7 @@ def cancel_group_booking(gid):
         SELECT room_id
         FROM group_booking_rooms
         WHERE group_booking_id=?
-        """,
+        
         (gid,)
     ).fetchall()
 
@@ -1850,7 +1850,7 @@ def cancel_group_booking(gid):
         rid = row["room_id"]
 
         still_used = connection.execute(
-            """
+            
             SELECT 1
             FROM bookings
             WHERE room_id=?
@@ -1858,7 +1858,7 @@ def cancel_group_booking(gid):
             AND checkin < ?
             AND checkout > ?
             LIMIT 1
-            """,
+            
             (
                 rid,
                 group["checkout"],
@@ -1868,12 +1868,12 @@ def cancel_group_booking(gid):
 
         if not still_used:
             connection.execute(
-                """
+                
                 UPDATE rooms
                 SET status='available'
                 WHERE id=?
                 AND status='booked'
-                """,
+            
                 (rid,)
             )
 
@@ -1900,7 +1900,7 @@ def companies():
 
     if request.method == "POST":
         connection.execute(
-            """
+        
             INSERT INTO companies(
                 name,
                 contact_name,
@@ -1911,28 +1911,28 @@ def companies():
                 created_at
             )
             VALUES(?,?,?,?,?,?,?)
-            """,
+            
             (
                 request.form["name"].strip(),
                 request.form.get(
                     "contact_name",
-                    ""
+                    
                 ).strip(),
                 request.form.get(
                     "phone",
-                    ""
+                    
                 ).strip(),
                 request.form.get(
                     "email",
-                    ""
+                    
                 ).strip(),
                 request.form.get(
                     "tax_number",
-                    ""
+                    
                 ).strip(),
                 request.form.get(
                     "notes",
-                    ""
+                    
                 ).strip(),
                 datetime.now().isoformat()
             )
@@ -1950,7 +1950,7 @@ def companies():
         SELECT *
         FROM companies
         ORDER BY id DESC
-        """
+        
     ).fetchall()
 
     connection.close()
@@ -1985,7 +1985,7 @@ def invoice(bid):
         JOIN rooms r
             ON r.id=b.room_id
         WHERE b.id=?
-        """,
+        
         (bid,)
     ).fetchone()
 
@@ -2020,12 +2020,12 @@ def seasons():
 
     if request.method == "POST":
         connection.execute(
-            """
+            
             INSERT INTO seasons(
                 name,start_date,end_date,notes
             )
             VALUES(?,?,?,?)
-            """,
+            
             (
                 request.form["name"],
                 request.form["start_date"],
@@ -2045,11 +2045,11 @@ def seasons():
         )
 
     rows = connection.execute(
-        """
+        
         SELECT *
         FROM seasons
         ORDER BY start_date DESC
-        """
+        
     ).fetchall()
 
     connection.close()
@@ -2095,7 +2095,7 @@ def reports():
             ON b.hotel_id=h.id
         GROUP BY h.id
         ORDER BY h.name
-        """
+        
     ).fetchall()
 
     connection.close()
@@ -2156,7 +2156,7 @@ def settings():
     methods=["POST"]
 )
 @login_required
-```python
+python
 def moyasar_get_invoice(invoice_id):
     secret = os.environ.get("MOYASAR_SECRET_KEY", "").strip()
 
@@ -2179,12 +2179,12 @@ def create_payment_link(bid):
 
     try:
         booking = connection.execute(
-            """
+            
             SELECT b.*, c.name AS customer_name
             FROM bookings b
             JOIN customers c ON c.id = b.customer_id
             WHERE b.id = ?
-            """,
+            
             (bid,),
         ).fetchone()
 
@@ -2267,23 +2267,24 @@ def create_payment_link(bid):
             raise RuntimeError("لم يُرجع Moyasar رقم الفاتورة ورابط الدفع.")
 
         connection.execute(
-            """
+            
             UPDATE bookings
             SET payment_url=?,
                 moyasar_invoice_id=?,
                 payment_status='pending'
             WHERE id=?
-            """,
+            ,
             (payment_url, invoice_id, bid),
         )
 
         connection.execute(
-            """
+            
             INSERT INTO payments
                 (booking_id, amount, method, payment_url,
                  status, reference, created_at, created_by)
             VALUES (?, ?, 'moyasar', ?, 'pending', ?, ?, ?)
-            """,
+    
+            
             (
                 bid,
                 remaining,
@@ -2362,29 +2363,29 @@ def moyasar_callback():
         if status == "paid":
             # اجعل التحديث آمناً عند تكرار الإشعار.
             payment = connection.execute(
-                """
+                
                 SELECT * FROM payments
                 WHERE reference=? AND booking_id=?
-                """,
+                ,
                 (invoice_id, booking_id),
             ).fetchone()
 
             if payment and payment["status"] != "paid":
                 connection.execute(
-                    """
+                    
                     UPDATE bookings
                     SET paid = MIN(price, paid + ?),
                         payment_status='paid'
                     WHERE id=?
-                    """,
+                    ,
                     (payment["amount"], booking_id),
                 )
 
                 connection.execute(
-                    """
+                    
                     UPDATE payments SET status='paid'
                     WHERE id=?
-                    """,
+                    ,
                     (payment["id"],),
                 )
 
@@ -2392,18 +2393,18 @@ def moyasar_callback():
 
         elif status in ("failed", "expired", "canceled", "voided"):
             connection.execute(
-                """
+                
                 UPDATE payments SET status=?
                 WHERE reference=? AND booking_id=?
                   AND status='pending'
-                """,
+                ,
                 (status, invoice_id, booking_id),
             )
             connection.execute(
-                """
+                
                 UPDATE bookings SET payment_status=?
                 WHERE id=? AND payment_status!='paid'
-                """,
+                ,
                 (status, booking_id),
             )
             connection.commit()
@@ -2473,4 +2474,3 @@ def moyasar_return():
         connection.close()
 
     return redirect(url_for("bookings"))
-```
