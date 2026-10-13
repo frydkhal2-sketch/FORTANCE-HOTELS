@@ -1,183 +1,291 @@
-```html
+
 {% extends "base.html" %}
+
+{% block title %}إدارة الحجوزات | FORTANCE HOTELS{% endblock %}
 
 {% block content %}
 
-<!-- عنوان الصفحة -->
+<style>
+.booking-header {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:16px;
+    margin-bottom:22px;
+}
+.booking-header h1 { margin:0 0 8px; font-size:25px; }
+.booking-header p { margin:0; line-height:1.8; }
+
+.booking-actions { display:flex; gap:8px; flex-wrap:wrap; }
+
+.booking-cards {
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(175px,1fr));
+    gap:15px;
+    margin-bottom:22px;
+}
+.booking-card {
+    background:#fff;
+    border:1px solid #e5eaf1;
+    border-radius:15px;
+    padding:18px;
+    box-shadow:0 5px 18px #10284408;
+}
+.booking-card .card-icon { font-size:24px; margin-bottom:12px; }
+.booking-card .card-number { font-size:23px; font-weight:900; margin-bottom:7px; }
+.booking-card .card-label { color:#6b778c; font-size:12px; }
+
+.booking-panel {
+    background:#fff;
+    border:1px solid #e5eaf1;
+    border-radius:16px;
+    padding:22px;
+    margin-bottom:22px;
+    box-shadow:0 5px 18px #10284408;
+}
+.booking-panel h2 { margin:0 0 8px; font-size:19px; }
+.booking-panel .panel-description { margin-bottom:20px; }
+
+.booking-form {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:16px;
+}
+.booking-field label {
+    display:block;
+    font-weight:bold;
+    color:#53627a;
+    margin-bottom:8px;
+}
+.booking-field input,
+.booking-field select {
+    width:100%;
+    min-height:44px;
+    padding:11px;
+    border:1px solid #dbe2ec;
+    border-radius:9px;
+    font:inherit;
+    background:#fff;
+}
+.booking-field input:focus,
+.booking-field select:focus {
+    outline:2px solid #d9a83f40;
+    border-color:#d9a83f;
+}
+.booking-form-actions {
+    grid-column:1/-1;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:5px;
+}
+.booking-table-wrap {
+    width:100%;
+    overflow-x:auto;
+}
+.booking-table {
+    width:100%;
+    min-width:1100px;
+    border-collapse:collapse;
+}
+.booking-table th,
+.booking-table td {
+    text-align:right;
+    padding:13px 11px;
+    border-bottom:1px solid #edf0f5;
+    vertical-align:middle;
+}
+.booking-table th {
+    background:#f4f7fb;
+    color:#4c5b70;
+    font-size:12px;
+}
+.booking-table tr:last-child td { border-bottom:0; }
+.booking-table tbody tr:hover { background:#fafbfd; }
+
+.booking-status {
+    display:inline-block;
+    border-radius:20px;
+    padding:6px 10px;
+    font-size:12px;
+    font-weight:bold;
+    white-space:nowrap;
+}
+.status-paid { background:#dcfce7; color:#166534; }
+.status-partial { background:#fff2cc; color:#8a5b00; }
+.status-unpaid { background:#fee2e2; color:#991b1b; }
+.status-cancelled { background:#e5e7eb; color:#374151; }
+.status-pending { background:#dbeafe; color:#1d4ed8; }
+
+.booking-money { line-height:1.9; white-space:nowrap; }
+.booking-money small { display:block; color:#6b778c; }
+.booking-row-actions {
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    gap:7px;
+    min-width:150px;
+}
+.booking-row-actions .btn,
+.booking-row-actions button {
+    width:100%;
+    text-align:center;
+    justify-content:center;
+    font-size:12px;
+    padding:9px 10px;
+    min-height:36px;
+}
+.booking-payment-form { margin:0; }
+.booking-payment-note { font-size:11px; color:#6b778c; line-height:1.7; }
+
+.booking-empty {
+    text-align:center;
+    padding:38px 15px;
+    color:#6b778c;
+}
+.booking-empty .empty-icon { font-size:40px; }
+.booking-empty h3 { color:#172033; }
+.booking-alert {
+    padding:12px 14px;
+    border-radius:10px;
+    background:#fff8e6;
+    color:#805b00;
+    line-height:1.8;
+    margin-bottom:16px;
+}
+@media(max-width:650px) {
+    .booking-form { grid-template-columns:1fr; }
+    .booking-panel { padding:15px; }
+    .booking-header h1 { font-size:21px; }
+}
+</style>
+
 <div class="booking-header">
     <div>
         <h1>📅 إدارة الحجوزات</h1>
-        <p class="muted">إدارة حجوزات العملاء والفنادق والغرف والفواتير.</p>
+        <p class="muted">
+            إدارة حجوزات العملاء والغرف والفواتير والمدفوعات.
+        </p>
     </div>
-
     <div class="booking-actions">
         <a href="#new-booking" class="btn gold">＋ حجز جديد</a>
     </div>
 </div>
 
-
-<!-- إحصائيات الحجوزات -->
-<div class="cards">
-
-    <div class="card">
-        <div class="icon">📅</div>
-        <div class="big">{{ bookings|length }}</div>
-        <div class="label">إجمالي الحجوزات</div>
+<div class="booking-cards">
+    <div class="booking-card">
+        <div class="card-icon">📅</div>
+        <div class="card-number">{{ bookings|length }}</div>
+        <div class="card-label">إجمالي الحجوزات المعروضة</div>
     </div>
 
-    <div class="card">
-        <div class="icon">🏨</div>
-        <div class="big">{{ hotels|length }}</div>
-        <div class="label">الفنادق</div>
+    <div class="booking-card">
+        <div class="card-icon">🏨</div>
+        <div class="card-number">{{ hotels|length }}</div>
+        <div class="card-label">الفنادق</div>
     </div>
 
-    <div class="card">
-        <div class="icon">🛏️</div>
-        <div class="big">{{ rooms|length }}</div>
-        <div class="label">الغرف</div>
+    <div class="booking-card">
+        <div class="card-icon">🛏️</div>
+        <div class="card-number">{{ rooms|length }}</div>
+        <div class="card-label">الغرف المسجلة</div>
     </div>
 
-    <div class="card">
-        <div class="icon">🧾</div>
-        <div class="big">ر.س</div>
-        <div class="label">إدارة الفواتير</div>
+    <div class="booking-card">
+        <div class="card-icon">💳</div>
+        <div class="card-number">Moyasar</div>
+        <div class="card-label">روابط الدفع الإلكتروني</div>
     </div>
-
 </div>
 
-
-<!-- حجز جديد -->
-<div class="panel" id="new-booking">
-
-    <div class="panel-head">
-        <div>
-            <h2>➕ إنشاء حجز جديد</h2>
-            <div class="muted">
-                أدخل بيانات العميل والإقامة لإنشاء الحجز.
-            </div>
-        </div>
+<div class="booking-panel" id="new-booking">
+    <h2>➕ إنشاء حجز جديد</h2>
+    <div class="panel-description muted">
+        أدخل بيانات العميل والفندق والغرفة وتواريخ الإقامة.
     </div>
 
-    <form method="post" class="form">
-
-        <div class="form-group">
-            <label>اسم العميل</label>
-            <input
-                type="text"
-                name="customer"
-                placeholder="اكتب اسم العميل"
-                required>
+    <form method="post" class="booking-form">
+        <div class="booking-field">
+            <label for="customer">اسم العميل</label>
+            <input id="customer" type="text" name="customer"
+                   placeholder="اكتب اسم العميل" required>
         </div>
 
-        <div class="form-group">
-            <label>رقم الجوال</label>
-            <input
-                type="text"
-                name="phone"
-                placeholder="05xxxxxxxx">
+        <div class="booking-field">
+            <label for="phone">رقم الجوال</label>
+            <input id="phone" type="text" name="phone"
+                   placeholder="05xxxxxxxx">
         </div>
 
-        <div class="form-group">
-            <label>الفندق</label>
-            <select name="hotel_id" required>
-
+        <div class="booking-field">
+            <label for="hotel_id">الفندق</label>
+            <select id="hotel_id" name="hotel_id" required>
                 <option value="">اختر الفندق</option>
-
                 {% for h in hotels %}
-                <option value="{{h.id}}">
-                    {{h.name}}
-                </option>
+                <option value="{{ h.id }}">{{ h.name }}</option>
                 {% endfor %}
-
             </select>
         </div>
 
-        <div class="form-group">
-            <label>الغرفة</label>
-            <select name="room_id" required>
-
+        <div class="booking-field">
+            <label for="room_id">الغرفة</label>
+            <select id="room_id" name="room_id" required>
                 <option value="">اختر الغرفة</option>
-
                 {% for r in rooms %}
-                <option value="{{r.id}}">
-                    غرفة {{r.number}} — {{r.room_type}} — {{r.price}} ر.س
+                <option value="{{ r.id }}">
+                    غرفة {{ r.number }} — {{ r.room_type }} — {{ r.price }} ر.س
                 </option>
                 {% endfor %}
-
             </select>
         </div>
 
-        <div class="form-group">
-            <label>تاريخ الدخول</label>
-            <input
-                type="date"
-                name="checkin"
-                required>
+        <div class="booking-field">
+            <label for="checkin">تاريخ الدخول</label>
+            <input id="checkin" type="date" name="checkin" required>
         </div>
 
-        <div class="form-group">
-            <label>تاريخ الخروج</label>
-            <input
-                type="date"
-                name="checkout"
-                required>
+        <div class="booking-field">
+            <label for="checkout">تاريخ الخروج</label>
+            <input id="checkout" type="date" name="checkout" required>
         </div>
 
-        <div class="form-group">
-            <label>المبلغ المدفوع</label>
-            <input
-                type="number"
-                name="paid"
-                value="0"
-                step="0.01"
-                placeholder="0.00">
+        <div class="booking-field">
+            <label for="paid">المبلغ المدفوع عند إنشاء الحجز</label>
+            <input id="paid" type="number" name="paid"
+                   value="0" min="0" step="0.01" placeholder="0.00">
         </div>
 
-        <div class="form-group">
-            <label>طريقة الدفع</label>
-            <select name="payment_method">
+        <div class="booking-field">
+            <label for="payment_method">طريقة الدفع</label>
+            <select id="payment_method" name="payment_method">
                 <option value="cash">نقدي</option>
                 <option value="card">بطاقة</option>
                 <option value="transfer">تحويل بنكي</option>
             </select>
         </div>
 
-        <div class="full">
-            <button type="submit" class="btn primary">
-                ✓ إنشاء الحجز
-            </button>
-
-            <a href="/bookings" class="btn danger">
-                إلغاء
-            </a>
+        <div class="booking-form-actions">
+            <button type="submit" class="btn gold">✓ إنشاء الحجز</button>
+            <a href="{{ url_for('bookings') }}" class="btn light">إلغاء</a>
         </div>
-
     </form>
-
 </div>
 
-
-<!-- قائمة الحجوزات -->
-<div class="panel">
-
-    <div class="panel-head">
-
-        <div>
-            <h2>📋 جميع الحجوزات</h2>
-            <div class="muted">
-                قائمة الحجوزات المسجلة في النظام.
-            </div>
-        </div>
-
+<div class="booking-panel">
+    <h2>📋 جميع الحجوزات</h2>
+    <div class="panel-description muted">
+        راجع قيمة الحجز والمدفوع والمتبقي، وأنشئ رابط الدفع عند الحاجة.
     </div>
 
+    <div class="booking-alert">
+        تنبيه: تأكيد الدفع الإلكتروني يجب أن يأتي من تحقق Moyasar على الخادم،
+        وليس بمجرد فتح العميل لرابط الدفع.
+    </div>
 
     {% if bookings %}
-
-    <div class="table-wrap">
-
-        <table>
-
+    <div class="booking-table-wrap">
+        <table class="booking-table">
             <thead>
                 <tr>
                     <th>رقم الحجز</th>
@@ -187,114 +295,127 @@
                     <th>الدخول</th>
                     <th>الخروج</th>
                     <th>الإجمالي</th>
-                    <th>الحالة</th>
-                    <th>الإجراء</th>
+                    <th>المدفوع</th>
+                    <th>المتبقي</th>
+                    <th>حالة السداد</th>
+                    <th>الإجراءات</th>
                 </tr>
             </thead>
-
             <tbody>
-
                 {% for b in bookings %}
+                {% set total = b.price|float %}
+                {% set paid_amount = b.paid|float %}
+                {% set remaining = [total - paid_amount, 0]|max %}
+                {% set booking_status = b.status|default('confirmed', true) %}
+                {% set payment_status = b.payment_status|default('', true) %}
 
                 <tr>
+                    <td><strong>{{ b.code }}</strong></td>
+                    <td>{{ b.customer }}</td>
+                    <td>🏨 {{ b.hotel }}</td>
+                    <td>🛏️ {{ b.room }}</td>
+                    <td>{{ b.checkin }}</td>
+                    <td>{{ b.checkout }}</td>
 
-                    <td>
-                        <strong>{{b.code}}</strong>
+                    <td class="booking-money">
+                        <strong>{{ "{:,.2f}".format(total) }} ر.س</strong>
+                    </td>
+
+                    <td class="booking-money">
+                        {{ "{:,.2f}".format(paid_amount) }} ر.س
+                    </td>
+
+                    <td class="booking-money">
+                        <strong>{{ "{:,.2f}".format(remaining) }} ر.س</strong>
                     </td>
 
                     <td>
-                        {{b.customer}}
+                        {% if booking_status == 'cancelled' %}
+                            <span class="booking-status status-cancelled">ملغي</span>
+                        {% elif remaining <= 0 %}
+                            <span class="booking-status status-paid">مسدد بالكامل</span>
+                        {% elif paid_amount > 0 %}
+                            <span class="booking-status status-partial">سداد جزئي</span>
+                        {% elif payment_status == 'pending' %}
+                            <span class="booking-status status-pending">بانتظار الدفع</span>
+                        {% else %}
+                            <span class="booking-status status-unpaid">غير مسدد</span>
+                        {% endif %}
                     </td>
 
                     <td>
-                        🏨 {{b.hotel}}
+                        <div class="booking-row-actions">
+                            <a class="btn gold"
+                               href="{{ url_for('invoices', bid=b.id) }}">
+                                🧾 عرض الفاتورة
+                            </a>
+
+                            {% if booking_status != 'cancelled' and remaining > 0 %}
+                            <form class="booking-payment-form"
+                                  method="post"
+                                  action="{{ url_for('create_payment_link', bid=b.id) }}">
+                                <button type="submit" class="btn">
+                                    💳 إنشاء رابط الدفع
+                                </button>
+                            </form>
+                            {% endif %}
+
+                            {% if b.payment_url %}
+                            <a class="btn light"
+                               href="{{ b.payment_url }}"
+                               target="_blank"
+                               rel="noopener noreferrer">
+                                🔗 فتح رابط الدفع
+                            </a>
+
+                            <button type="button" class="btn light"
+                                    onclick="copyPaymentLink(this)"
+                                    data-payment-url="{{ b.payment_url }}">
+                                📋 نسخ رابط الدفع
+                            </button>
+                            {% endif %}
+
+                            {% if booking_status == 'cancelled' %}
+                                <span class="booking-payment-note">الحجز ملغي</span>
+                            {% elif remaining <= 0 %}
+                                <span class="booking-payment-note">لا يوجد مبلغ متبقٍ</span>
+                            {% endif %}
+                        </div>
                     </td>
-
-                    <td>
-                        🛏️ {{b.room}}
-                    </td>
-
-                    <td>
-                        {{b.checkin}}
-                    </td>
-
-                    <td>
-                        {{b.checkout}}
-                    </td>
-
-                    <td>
-                        <strong>
-                            {{"{:,.0f}".format(b.price)}} ر.س
-                        </strong>
-                    </td>
-
-                    <td>
-                        <span class="status confirmed">
-                            مؤكد
-                        </span>
-                    </td>
-
-                    <td>
-
-                        <a
-                            class="btn gold"
-                            href="/invoices/{{b.id}}">
-                            🧾 فاتورة
-                        </a>
-
-                    </td>
-
                 </tr>
-
                 {% endfor %}
-
             </tbody>
-
         </table>
-
     </div>
 
     {% else %}
-
-    <div class="empty">
-
+    <div class="booking-empty">
         <div class="empty-icon">📅</div>
-
         <h3>لا توجد حجوزات حتى الآن</h3>
-
-        <p>
-            ابدأ بإضافة أول حجز من زر "حجز جديد".
-        </p>
-
-        <a href="#new-booking" class="btn gold">
-            ＋ إضافة أول حجز
-        </a>
-
+        <p>ابدأ بإضافة أول حجز من النموذج أعلاه.</p>
+        <a href="#new-booking" class="btn gold">＋ إضافة أول حجز</a>
     </div>
-
     {% endif %}
-
 </div>
 
-{% endblock %}
-```
-```html
-{% if b.status != 'cancelled' and (b.price|float > b.paid|float) %}
-<form method="post" action="/payments/link/{{ b.id }}">
-    <button type="submit" class="gold">
-        💳 إنشاء رابط الدفع
-    </button>
-</form>
-{% endif %}
+<script>
+async function copyPaymentLink(button) {
+    const url = button.dataset.paymentUrl;
 
-{% if b.payment_url %}
-<a class="btn" href="{{ b.payment_url }}" target="_blank"
-   rel="noopener">
-    🔗 فتح رابط الدفع
-</a>
-<button type="button"
-        onclick="navigator.clipboard.writeText({{ b.payment_url|tojson }})">
-    📋 نسخ الرابط
-</button>
-{% endif %}
-```
+    if (!url) {
+        alert("رابط الدفع غير موجود.");
+        return;
+    }
+
+    try {
+        await navigator.clipboard.writeText(url);
+        const oldText = button.textContent;
+        button.textContent = "✓ تم نسخ الرابط";
+        setTimeout(() => button.textContent = oldText, 1800);
+    } catch (error) {
+        window.prompt("انسخ رابط الدفع:", url);
+    }
+}
+</script>
+
+{% endblock %}
