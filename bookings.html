@@ -278,3 +278,23 @@
 
 {% endblock %}
 ```
+```html
+{% if b.status != 'cancelled' and (b.price|float > b.paid|float) %}
+<form method="post" action="/payments/link/{{ b.id }}">
+    <button type="submit" class="gold">
+        💳 إنشاء رابط الدفع
+    </button>
+</form>
+{% endif %}
+
+{% if b.payment_url %}
+<a class="btn" href="{{ b.payment_url }}" target="_blank"
+   rel="noopener">
+    🔗 فتح رابط الدفع
+</a>
+<button type="button"
+        onclick="navigator.clipboard.writeText({{ b.payment_url|tojson }})">
+    📋 نسخ الرابط
+</button>
+{% endif %}
+```
