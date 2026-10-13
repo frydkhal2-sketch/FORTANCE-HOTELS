@@ -1,1 +1,288 @@
-{% extends "base.html" %}{% block content %}<div class="top"><div><h1>التقارير</h1><div class="muted">ملخص الحجوزات والتحصيل لكل فندق.</div></div></div><div class="panel"><table><tr><th>الفندق</th><th>الحجوزات</th><th>إجمالي الحجوزات</th><th>المحصل</th></tr>{% for r in rows %}<tr><td>{{r.hotel}}</td><td>{{r.bookings}}</td><td>{{"{:,.0f}".format(r.total)}} ر.س</td><td>{{"{:,.0f}".format(r.paid)}} ر.س</td></tr>{% endfor %}</table></div>{% endblock %}
+```html
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+.reports-page {
+    direction: rtl;
+    text-align: right;
+    color: #172338;
+}
+
+.reports-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.reports-header h1 {
+    margin: 0 0 8px;
+    font-size: 28px;
+    font-weight: 800;
+    color: #0b2340;
+}
+
+.reports-header p {
+    margin: 0;
+    color: #778195;
+    font-size: 14px;
+}
+
+.reports-brand {
+    background: #0b2340;
+    color: #e5bd63;
+    padding: 12px 18px;
+    border-radius: 12px;
+    font-weight: 800;
+    letter-spacing: 1px;
+}
+
+.reports-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.report-stat {
+    background: #fff;
+    border: 1px solid #e7ebf1;
+    border-radius: 16px;
+    padding: 22px;
+    box-shadow: 0 5px 18px rgba(11, 35, 64, .05);
+}
+
+.report-stat .stat-label {
+    display: block;
+    color: #778195;
+    font-size: 13px;
+    margin-bottom: 12px;
+}
+
+.report-stat .stat-value {
+    display: block;
+    color: #0b2340;
+    font-size: 25px;
+    font-weight: 800;
+    overflow-wrap: anywhere;
+}
+
+.report-stat.collected {
+    border-top: 4px solid #23966b;
+}
+
+.report-stat.revenue {
+    border-top: 4px solid #d4af37;
+}
+
+.report-stat.bookings {
+    border-top: 4px solid #467dc1;
+}
+
+.reports-panel {
+    background: #fff;
+    border: 1px solid #e7ebf1;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 5px 18px rgba(11, 35, 64, .05);
+}
+
+.reports-panel-header {
+    padding: 20px 22px;
+    border-bottom: 1px solid #edf0f5;
+}
+
+.reports-panel-header h2 {
+    margin: 0 0 6px;
+    color: #0b2340;
+    font-size: 19px;
+}
+
+.reports-panel-header p {
+    margin: 0;
+    color: #778195;
+    font-size: 13px;
+}
+
+.reports-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.reports-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 620px;
+}
+
+.reports-table th {
+    background: #f5f7fb;
+    color: #526078;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 16px;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.reports-table td {
+    padding: 17px 16px;
+    border-bottom: 1px solid #edf0f5;
+    font-size: 14px;
+    color: #344158;
+}
+
+.reports-table tbody tr:hover {
+    background: #fafbfd;
+}
+
+.reports-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.hotel-name {
+    font-weight: 700;
+    color: #0b2340;
+}
+
+.booking-count {
+    display: inline-block;
+    background: #eaf2ff;
+    color: #285fa8;
+    padding: 5px 11px;
+    border-radius: 20px;
+    font-weight: 700;
+}
+
+.money {
+    white-space: nowrap;
+    font-weight: 700;
+}
+
+.paid-money {
+    color: #168257;
+}
+
+.reports-empty {
+    text-align: center !important;
+    padding: 42px 16px !important;
+    color: #778195 !important;
+}
+
+@media (max-width: 700px) {
+    .reports-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .reports-header h1 {
+        font-size: 23px;
+    }
+
+    .reports-brand {
+        width: 100%;
+        text-align: center;
+        box-sizing: border-box;
+    }
+}
+</style>
+
+<div class="reports-page">
+
+    <div class="reports-header">
+        <div>
+            <h1>التقارير المالية</h1>
+            <p>ملخص الحجوزات وإجمالي المبالغ والتحصيل لكل فندق.</p>
+        </div>
+
+        <div class="reports-brand">
+            FORTANCE HOTELS
+        </div>
+    </div>
+
+    {% set ns = namespace(bookings=0, total=0, paid=0) %}
+
+    {% for r in rows %}
+        {% set ns.bookings = ns.bookings + (r.bookings or 0) %}
+        {% set ns.total = ns.total + (r.total or 0) %}
+        {% set ns.paid = ns.paid + (r.paid or 0) %}
+    {% endfor %}
+
+    <div class="reports-stats">
+
+        <div class="report-stat bookings">
+            <span class="stat-label">إجمالي الحجوزات</span>
+            <span class="stat-value">{{ "{:,.0f}".format(ns.bookings) }}</span>
+        </div>
+
+        <div class="report-stat revenue">
+            <span class="stat-label">إجمالي قيمة الحجوزات</span>
+            <span class="stat-value">{{ "{:,.2f}".format(ns.total) }} ر.س</span>
+        </div>
+
+        <div class="report-stat collected">
+            <span class="stat-label">إجمالي المبالغ المحصلة</span>
+            <span class="stat-value">{{ "{:,.2f}".format(ns.paid) }} ر.س</span>
+        </div>
+
+    </div>
+
+    <div class="reports-panel">
+
+        <div class="reports-panel-header">
+            <h2>تفاصيل الفنادق</h2>
+            <p>الأرقام المعروضة تعتمد على البيانات التي يرسلها مسار التقارير من app.py.</p>
+        </div>
+
+        <div class="reports-table-wrap">
+            <table class="reports-table">
+
+                <thead>
+                    <tr>
+                        <th>الفندق</th>
+                        <th>عدد الحجوزات</th>
+                        <th>إجمالي الحجوزات</th>
+                        <th>المبلغ المحصل</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for r in rows %}
+                    <tr>
+                        <td class="hotel-name">{{ r.hotel }}</td>
+
+                        <td>
+                            <span class="booking-count">
+                                {{ r.bookings or 0 }}
+                            </span>
+                        </td>
+
+                        <td class="money">
+                            {{ "{:,.2f}".format(r.total or 0) }} ر.س
+                        </td>
+
+                        <td class="money paid-money">
+                            {{ "{:,.2f}".format(r.paid or 0) }} ر.س
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="reports-empty">
+                            لا توجد بيانات تقارير لعرضها حاليًا.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+
+            </table>
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
+```
