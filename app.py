@@ -2239,7 +2239,18 @@ def create_payment_link(bid):
     return redirect(
         url_for("bookings")
     )
-
+    ensure_column(
+        connection, "bookings",
+        "payment_url", "TEXT DEFAULT ''"
+    )
+    ensure_column(
+        connection, "bookings",
+        "moyasar_invoice_id", "TEXT DEFAULT ''"
+    )
+    ensure_column(
+        connection, "bookings",
+        "payment_status", "TEXT DEFAULT 'unpaid'"
+    )
 
 init_db()
 
