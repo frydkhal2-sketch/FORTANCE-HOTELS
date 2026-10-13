@@ -1,112 +1,570 @@
+```html
 <!doctype html>
 <html lang="ar" dir="rtl">
-
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>FORTANCE HOTELS</title>
+    <title>{% block title %}FORTANCE HOTELS{% endblock %}</title>
 
     <link rel="stylesheet"
           href="{{ url_for('static', filename='style.css') }}">
+
+    <style>
+        :root {
+            --navy: #071426;
+            --navy-light: #122b45;
+            --gold: #d9a83f;
+            --gold-light: #f4dfaa;
+            --bg: #f5f7fb;
+            --white: #ffffff;
+            --text: #172033;
+            --muted: #6b778c;
+            --border: #e5eaf1;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: Tahoma, Arial, sans-serif;
+            font-size: 14px;
+        }
+
+        a {
+            text-decoration: none;
+        }
+
+        .layout {
+            min-height: 100vh;
+        }
+
+        /* القائمة الجانبية */
+        .side {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 255px;
+            padding: 18px 14px;
+            overflow-y: auto;
+            color: white;
+            background: linear-gradient(
+                180deg,
+                var(--navy),
+                var(--navy-light)
+            );
+            z-index: 100;
+        }
+
+        .brand {
+            text-align: center;
+            padding: 10px 8px 22px;
+            border-bottom: 1px solid #ffffff20;
+        }
+
+        .brand img {
+            display: block;
+            width: 150px;
+            max-width: 100%;
+            height: 90px;
+            object-fit: contain;
+            margin: 0 auto 10px;
+        }
+
+        .brand-name {
+            color: var(--gold-light);
+            font-size: 17px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .brand-subtitle {
+            margin-top: 6px;
+            color: #c6d0df;
+            font-size: 11px;
+        }
+
+        /* بيانات المستخدم */
+        .userbox {
+            margin: 18px 0;
+            padding: 15px;
+            border: 1px solid #ffffff18;
+            border-radius: 13px;
+            background: #ffffff0d;
+            line-height: 2;
+            overflow-wrap: anywhere;
+        }
+
+        .userbox .welcome {
+            color: #dce5f2;
+            font-size: 12px;
+        }
+
+        .userbox .username {
+            color: var(--gold-light);
+        }
+
+        .user-role {
+            display: inline-block;
+            margin-top: 5px;
+            padding: 3px 9px;
+            border-radius: 20px;
+            background: #ffffff14;
+            color: #e5eaf1;
+            font-size: 11px;
+        }
+
+        /* روابط القائمة */
+        .menu-title {
+            margin: 20px 10px 9px;
+            color: #9eafc5;
+            font-size: 11px;
+        }
+
+        .menu {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .menu a {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px;
+            border-radius: 10px;
+            color: #dce5f2;
+            font-size: 13px;
+            font-weight: bold;
+            transition: background .2s, color .2s;
+        }
+
+        .menu a:hover,
+        .menu a.active {
+            background: #ffffff16;
+            color: var(--gold-light);
+        }
+
+        .menu a.active {
+            border-right: 3px solid var(--gold);
+        }
+
+        .menu .logout {
+            margin-top: 12px;
+            color: #ffcccc;
+        }
+
+        .menu .logout:hover {
+            background: #b423182b;
+            color: #ffffff;
+        }
+
+        /* منطقة الصفحة */
+        .main {
+            min-height: 100vh;
+            margin-right: 255px;
+            padding: 28px;
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 22px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .topbar-title {
+            margin: 0;
+            color: var(--navy);
+            font-size: 20px;
+        }
+
+        .topbar-subtitle {
+            margin-top: 6px;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .company-label {
+            color: #8a6821;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        /* رسائل النظام */
+        .flash {
+            margin-bottom: 14px;
+            padding: 13px 15px;
+            border: 1px solid #b7e4c7;
+            border-radius: 10px;
+            background: #e9f8ef;
+            color: #17653a;
+            line-height: 1.8;
+        }
+
+        .flash.error {
+            border-color: #f2b8b5;
+            background: #fde8e7;
+            color: #a61b1b;
+        }
+
+        .flash.warning {
+            border-color: #f0d28b;
+            background: #fff6dc;
+            color: #815b00;
+        }
+
+        .flash.info {
+            border-color: #b8d8f5;
+            background: #eaf4ff;
+            color: #174b7a;
+        }
+
+        /* مكونات الصفحات */
+        .pagehead {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .pagehead h1 {
+            margin: 0 0 7px;
+            color: var(--navy);
+            font-size: 23px;
+        }
+
+        .muted {
+            color: var(--muted);
+        }
+
+        .panel,
+        .stat {
+            margin: 16px 0;
+            padding: 20px;
+            border: 1px solid var(--border);
+            border-radius: 15px;
+            background: var(--white);
+            box-shadow: 0 5px 20px #10284408;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(
+                auto-fit,
+                minmax(180px, 1fr)
+            );
+            gap: 14px;
+        }
+
+        .formgrid {
+            display: grid;
+            grid-template-columns: repeat(
+                auto-fit,
+                minmax(200px, 1fr)
+            );
+            gap: 14px;
+        }
+
+        .field label {
+            display: block;
+            margin-bottom: 8px;
+            color: #53627a;
+            font-weight: bold;
+        }
+
+        .field input,
+        .field select,
+        .field textarea {
+            width: 100%;
+            min-height: 42px;
+            padding: 11px 12px;
+            border: 1px solid #dbe2ec;
+            border-radius: 9px;
+            background: white;
+            color: var(--text);
+            font: inherit;
+        }
+
+        .field input:focus,
+        .field select:focus,
+        .field textarea:focus {
+            outline: 2px solid #d9a83f55;
+            border-color: var(--gold);
+        }
+
+        .btn,
+        button {
+            display: inline-block;
+            padding: 11px 15px;
+            border: 0;
+            border-radius: 9px;
+            background: var(--navy-light);
+            color: white;
+            font: inherit;
+            text-align: center;
+            cursor: pointer;
+        }
+
+        .btn:hover,
+        button:hover {
+            opacity: .9;
+        }
+
+        .btn.gold,
+        button.gold {
+            background: var(--gold);
+            color: #171717;
+        }
+
+        .btn.red,
+        button.red {
+            background: #b42318;
+            color: white;
+        }
+
+        .tablewrap {
+            width: 100%;
+            overflow-x: auto;
+            border-radius: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #edf0f5;
+            text-align: right;
+            vertical-align: middle;
+        }
+
+        th {
+            background: #f4f7fb;
+            color: #4c5b70;
+            white-space: nowrap;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 5px 9px;
+            border-radius: 20px;
+            background: #edf5ff;
+            color: #244b75;
+        }
+
+        /* الجوال والتابلت */
+        @media (max-width: 850px) {
+            .side {
+                position: relative;
+                width: 100%;
+                height: auto;
+                max-height: none;
+                padding: 12px;
+            }
+
+            .brand {
+                padding-bottom: 14px;
+            }
+
+            .brand img {
+                height: 65px;
+            }
+
+            .userbox {
+                margin: 12px 0;
+            }
+
+            .menu-title {
+                margin-top: 14px;
+            }
+
+            .menu {
+                display: grid;
+                grid-template-columns: repeat(
+                    2,
+                    minmax(0, 1fr)
+                );
+                gap: 6px;
+            }
+
+            .menu a {
+                padding: 11px 9px;
+                font-size: 12px;
+            }
+
+            .menu .logout {
+                margin-top: 0;
+            }
+
+            .main {
+                margin-right: 0;
+                padding: 16px;
+            }
+
+            .topbar-title {
+                font-size: 17px;
+            }
+
+            .panel,
+            .stat {
+                padding: 14px;
+            }
+        }
+
+        @media (max-width: 420px) {
+            .menu {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .main {
+                padding: 11px;
+            }
+
+            .formgrid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
 
 <body>
+<div class="layout">
 
-    <div class="layout">
+    <aside class="side">
 
-        <!-- القائمة الجانبية -->
-        <aside class="side">
+        <div class="brand">
+            <img
+                src="{{ url_for('static', filename='logo.jpg') }}"
+                alt="شعار FORTANCE HOTELS"
+                onerror="this.style.display='none';"
+            >
+            <div class="brand-name">FORTANCE HOTELS</div>
+            <div class="brand-subtitle">إدارة الضيافة الفندقية</div>
+        </div>
 
-            <!-- الشعار -->
-            <div class="brand">
-                <img src="{{ url_for('static', filename='logo.jpg') }}"
-                     alt="FORTANCE HOTELS">
+        <div class="userbox">
+            <div class="welcome">مرحبًا بك</div>
+
+            <strong class="username">
+                {{ user_name or 'المستخدم' }}
+            </strong>
+
+            <br>
+
+            <span class="user-role">
+                {{ ROLES.get(user_role, user_role or 'مستخدم') }}
+            </span>
+        </div>
+
+        <div class="menu-title">القائمة الرئيسية</div>
+
+        <nav class="menu">
+
+            <a href="/dashboard"
+               class="{% if request.path == '/dashboard' %}active{% endif %}">
+                🏠 الرئيسية
+            </a>
+
+            <a href="/hotels"
+               class="{% if request.path.startswith('/hotels') %}active{% endif %}">
+                🏨 الفنادق
+            </a>
+
+            <a href="/rooms"
+               class="{% if request.path.startswith('/rooms') %}active{% endif %}">
+                🛏️ الغرف
+            </a>
+
+            <a href="/bookings"
+               class="{% if request.path.startswith('/bookings') %}active{% endif %}">
+                📅 الحجوزات
+            </a>
+
+            <a href="/group-bookings"
+               class="{% if request.path.startswith('/group-bookings') %}active{% endif %}">
+                👥 حجوزات المجموعات
+            </a>
+
+            <a href="/companies"
+               class="{% if request.path.startswith('/companies') %}active{% endif %}">
+                🏢 الشركات
+            </a>
+
+            {% if user_role == 'admin' %}
+            <a href="/employees"
+               class="{% if request.path.startswith('/employees') %}active{% endif %}">
+                👤 الموظفون
+            </a>
+
+            <a href="/settings"
+               class="{% if request.path.startswith('/settings') %}active{% endif %}">
+                ⚙️ إعدادات النظام
+            </a>
+            {% endif %}
+
+            <a href="/seasons"
+               class="{% if request.path.startswith('/seasons') %}active{% endif %}">
+                🗓️ الإجازات والمواسم
+            </a>
+
+            <a href="/reports"
+               class="{% if request.path.startswith('/reports') %}active{% endif %}">
+                📊 التقارير
+            </a>
+
+            <a href="/logout" class="logout">
+                🚪 تسجيل الخروج
+            </a>
+
+        </nav>
+    </aside>
+
+    <main class="main">
+
+        <div class="topbar">
+            <div>
+                <h2 class="topbar-title">
+                    {% block page_title %}نظام إدارة الفنادق{% endblock %}
+                </h2>
+                <div class="topbar-subtitle">
+                    إدارة الفنادق والغرف والحجوزات
+                </div>
             </div>
 
-            <!-- معلومات المستخدم -->
-            <div class="userbox">
-                مرحبًا
-                <b>{{ user_name }}</b>
-
-                <br>
-
-                <span>
-                    {{ ROLES.get(user_role, user_role) }}
-                </span>
+            <div class="company-label">
+                FORTANCE HOTELS
             </div>
+        </div>
 
-            <!-- القائمة الرئيسية -->
-            <nav class="menu">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for cat, msg in messages %}
+                <div class="flash {{ cat }}">
+                    {{ msg }}
+                </div>
+            {% endfor %}
+        {% endwith %}
 
-                <a href="/dashboard">
-                    🏠 الرئيسية
-                </a>
+        {% block content %}{% endblock %}
 
-                <a href="/hotels">
-                    🏨 الفنادق
-                </a>
+    </main>
 
-                <a href="/rooms">
-                    🛏️ الغرف
-                </a>
-
-                <a href="/bookings">
-                    📅 الحجوزات
-                </a>
-
-                {% if user_role == 'admin' %}
-                <a href="/employees">
-                    👥 الموظفون
-                </a>
-                {% endif %}
-
-                <a href="/seasons">
-                    🗓️ الإجازات والمواسم
-                </a>
-
-                <a href="/reports">
-                    📊 التقارير
-                </a>
-
-                <a href="/logout">
-                    🚪 تسجيل الخروج
-                </a>
-
-            </nav>
-
-        </aside>
-
-
-        <!-- المحتوى الرئيسي -->
-        <main class="main">
-
-            <!-- رسائل النظام -->
-            {% with messages = get_flashed_messages(with_categories=true) %}
-
-                {% for cat, msg in messages %}
-
-                    <div class="flash {{ 'error' if cat == 'error' else '' }}">
-                        {{ msg }}
-                    </div>
-
-                {% endfor %}
-
-            {% endwith %}
-
-
-            <!-- محتوى الصفحات -->
-            {% block content %}
-
-            {% endblock %}
-
-        </main>
-
-    </div>
-
+</div>
 </body>
-<!doctype html>
-<html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FORTANCE HOTELS</title><link rel="stylesheet" href="{{ url_for('static',filename='style.css') }}">
-<style>
-:root{--navy:#071426;--gold:#d9a83f;--bg:#f5f7fb}body{margin:0;background:var(--bg);font-family:Tahoma,Arial,sans-serif;color:#172033}.layout{min-height:100vh}.side{position:fixed;right:0;top:0;bottom:0;width:255px;background:linear-gradient(180deg,#071426,#122b45);color:#fff;padding:18px;box-sizing:border-box;overflow:auto;z-index:5}.brand{text-align:center;padding:8px 0 22px;border-bottom:1px solid #35455b}.brand img{width:150px;max-height:105px;object-fit:contain}.userbox{background:#ffffff12;border:1px solid #ffffff14;border-radius:16px;padding:16px;margin:18px 0}.menu{display:flex;flex-direction:column;gap:5px}.menu a{color:#dce5f2;text-decoration:none;padding:13px 12px;border-radius:10px;display:block;font-weight:bold}.menu a:hover{background:#ffffff18;color:#f1c35b}.main{margin-right:255px;padding:28px;min-height:100vh;box-sizing:border-box}.pagehead{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:22px}.panel,.stat{background:white;border:1px solid #e5eaf1;border-radius:16px;padding:20px;margin:16px 0;box-shadow:0 6px 20px #1028440a}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}.formgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}.field label{display:block;font-weight:bold;margin-bottom:8px;color:#53627a}.field input,.field select,.field textarea{width:100%;box-sizing:border-box;padding:12px;border:1px solid #dbe2ec;border-radius:9px;background:#fff;font:inherit}.btn,button{display:inline-block;border:0;border-radius:9px;background:#102844;color:white;padding:11px 15px;font:inherit;text-decoration:none;cursor:pointer}.btn.gold,button.gold{background:var(--gold);color:#171717}.btn.red,button.red{background:#b42318;color:white}.tablewrap{overflow:auto}table{width:100%;border-collapse:collapse;background:white}th,td{text-align:right;padding:12px;border-bottom:1px solid #edf0f5;white-space:nowrap}th{background:#f4f7fb;color:#4c5b70}.flash{padding:12px 15px;border-radius:10px;background:#e5f7eb;margin-bottom:12px}.flash.error{background:#fde8e7}.tag{padding:5px 9px;border-radius:20px;background:#edf5ff;display:inline-block}.muted{color:#6b778c}@media(max-width:850px){.side{position:static;width:auto}.main{margin:0;padding:15px}.menu{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.brand img{max-height:80px}}
-</style></head><body><div class="layout"><aside class="side"><div class="brand"><img src="{{ url_for('static',filename='logo.jpg') }}" alt="FORTANCE HOTELS"><div><b>FORTANCE HOTELS</b></div></div><div class="userbox">مرحبًا <b>{{ user_name or 'المستخدم' }}</b><br><small>{{ ROLES.get(user_role,user_role) }}</small></div><nav class="menu"><a href="/dashboard">🏠 الرئيسية</a><a href="/hotels">🏨 الفنادق</a><a href="/rooms">🛏️ الغرف</a><a href="/bookings">📅 الحجوزات</a><a href="/group-bookings">👥 حجوزات المجموعات</a><a href="/companies">🏢 الشركات</a>{% if user_role == 'admin' %}<a href="/employees">👥 الموظفون</a><a href="/settings">⚙️ إعدادات النظام</a>{% endif %}<a href="/seasons">🗓️ الإجازات والمواسم</a><a href="/reports">📊 التقارير</a><a href="/logout">🚪 تسجيل الخروج</a></nav></aside><main class="main">{% with messages=get_flashed_messages(with_categories=true) %}{% for cat,msg in messages %}<div class="flash {{ 'error' if cat=='error' else '' }}">{{ msg }}</div>{% endfor %}{% endwith %}{% block content %}{% endblock %}</main></div></body></html>
+</html>
+```
