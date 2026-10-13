@@ -2179,12 +2179,12 @@ def create_payment_link(bid):
 
     try:
         booking = connection.execute(
-            
+            """
             SELECT b.*, c.name AS customer_name
             FROM bookings b
             JOIN customers c ON c.id = b.customer_id
             WHERE b.id = ?
-            
+            """,
             (bid,),
         ).fetchone()
 
@@ -2197,8 +2197,7 @@ def create_payment_link(bid):
             return redirect(url_for("bookings"))
 
         remaining = round(
-            float(booking["price"]) - float(booking["paid"]),
-            2,
+            float(booking["price"]) - float(booking["paid"]), 2
         )
 
         if remaining <= 0:
@@ -2212,10 +2211,9 @@ def create_payment_link(bid):
         ).rstrip("/")
 
         if not secret:
-            flash("أضف MOYASAR_SECRET_KEY في Render أولاً.", "error")
+            flash("أضف MOYASAR_SECRET_KEY في إعدادات Render.", "error")
             return redirect(url_for("bookings"))
 
-        # لا تنشئ فاتورة جديدة إذا كان هناك رابط سابق صالح.
         old_id = booking["moyasar_invoice_id"] or ""
 
         if old_id:
@@ -2225,6 +2223,7 @@ def create_payment_link(bid):
                 if (
                     old_invoice.get("status") == "initiated"
                     and old_invoice.get("amount") == round(remaining * 100)
+                    and old_invoice.get("currency") == "SAR"
                     and old_invoice.get("url")
                 ):
                     connection.execute(
@@ -2235,7 +2234,7 @@ def create_payment_link(bid):
                     flash("رابط الدفع السابق ما زال صالحاً.", "ok")
                     return redirect(url_for("bookings"))
 
-            except (requests.RequestException, ValueError):
+            except (requests.RequestException, ValueError, RuntimeError):
                 pass
 
         payload = {
@@ -2267,31 +2266,30 @@ def create_payment_link(bid):
             raise RuntimeError("لم يُرجع Moyasar رقم الفاتورة ورابط الدفع.")
 
         connection.execute(
-            
+            """
             UPDATE bookings
             SET payment_url=?,
                 moyasar_invoice_id=?,
                 payment_status='pending'
             WHERE id=?
-            ,
+            """,
             (payment_url, invoice_id, bid),
         )
 
         connection.execute(
-            
+            """
             INSERT INTO payments
                 (booking_id, amount, method, payment_url,
                  status, reference, created_at, created_by)
             VALUES (?, ?, 'moyasar', ?, 'pending', ?, ?, ?)
-    
-            
+            """,
             (
                 bid,
                 remaining,
                 payment_url,
                 invoice_id,
                 datetime.now().isoformat(timespec="seconds"),
-                session.get("user_id"),
+                session.get("uid"),
             ),
         )
 
@@ -2316,9 +2314,8 @@ def create_payment_link(bid):
 
 @app.route("/payments/moyasar/callback", methods=["POST"])
 def moyasar_callback():
-    # لا نثق ببيانات الإشعار وحدها؛ نسترجع الفاتورة من Moyasar.
     data = request.get_json(silent=True) or {}
-    invoice_id = data.get("id")
+    invoice_id = str(data.get("id") or "").strip()
 
     if not invoice_id:
         return jsonify({"error": "missing invoice id"}), 400
@@ -2326,9 +2323,9 @@ def moyasar_callback():
     connection = db()
 
     try:
-        invoice_data = moyasar_get_invoice(str(invoice_id))
+        invoice_data = moyasar_get_invoice(invoice_id)
 
-        if invoice_data.get("id") != invoice_id:
+        if str(invoice_data.get("id") or "") != invoice_id:
             return jsonify({"error": "invoice mismatch"}), 400
 
         metadata = invoice_data.get("metadata") or {}
@@ -2345,15 +2342,22 @@ def moyasar_callback():
         if not booking:
             return jsonify({"error": "booking not found"}), 404
 
-        if booking["moyasar_invoice_id"] != invoice_id:
+        if str(booking["moyasar_invoice_id"] or "") != invoice_id:
             return jsonify({"error": "invoice not linked to booking"}), 400
 
-        expected_amount = round(
-            max(0, float(booking["price"]) - float(booking["paid"])) * 100
-        )
+        payment = connection.execute(
+            """
+            SELECT * FROM payments
+            WHERE reference=? AND booking_id=?
+            """,
+            (invoice_id, booking_id),
+        ).fetchone()
+
+        if not payment:
+            return jsonify({"error": "payment record not found"}), 404
 
         if (
-            invoice_data.get("amount") != expected_amount
+            invoice_data.get("amount") != round(float(payment["amount"]) * 100)
             or invoice_data.get("currency") != "SAR"
         ):
             return jsonify({"error": "amount or currency mismatch"}), 400
@@ -2361,31 +2365,19 @@ def moyasar_callback():
         status = invoice_data.get("status")
 
         if status == "paid":
-            # اجعل التحديث آمناً عند تكرار الإشعار.
-            payment = connection.execute(
-                
-                SELECT * FROM payments
-                WHERE reference=? AND booking_id=?
-                ,
-                (invoice_id, booking_id),
-            ).fetchone()
-
-            if payment and payment["status"] != "paid":
+            if payment["status"] != "paid":
                 connection.execute(
-                    
+                    """
                     UPDATE bookings
                     SET paid = MIN(price, paid + ?),
                         payment_status='paid'
                     WHERE id=?
-                    ,
+                    """,
                     (payment["amount"], booking_id),
                 )
 
                 connection.execute(
-                    
-                    UPDATE payments SET status='paid'
-                    WHERE id=?
-                    ,
+                    "UPDATE payments SET status='paid' WHERE id=?",
                     (payment["id"],),
                 )
 
@@ -2393,25 +2385,26 @@ def moyasar_callback():
 
         elif status in ("failed", "expired", "canceled", "voided"):
             connection.execute(
-                
+                """
                 UPDATE payments SET status=?
                 WHERE reference=? AND booking_id=?
                   AND status='pending'
-                ,
+                """,
                 (status, invoice_id, booking_id),
             )
+
             connection.execute(
-                
+                """
                 UPDATE bookings SET payment_status=?
                 WHERE id=? AND payment_status!='paid'
-                ,
+                """,
                 (status, booking_id),
             )
             connection.commit()
 
         return jsonify({"received": True}), 200
 
-    except (requests.RequestException, ValueError):
+    except (requests.RequestException, ValueError, RuntimeError):
         connection.rollback()
         app.logger.exception("Moyasar callback verification failed")
         return jsonify({"error": "verification failed"}), 502
@@ -2426,10 +2419,7 @@ def moyasar_return():
     invoice_id = request.args.get("id", "").strip()
 
     if not invoice_id:
-        flash(
-            "عدت من صفحة الدفع. تحقق من حالة الدفع في الحجوزات.",
-            "ok",
-        )
+        flash("عدت من صفحة الدفع. تحقق من حالة الدفع في الحجوزات.", "ok")
         return redirect(url_for("bookings"))
 
     connection = db()
@@ -2444,21 +2434,31 @@ def moyasar_return():
             (booking_id,),
         ).fetchone() if booking_id else None
 
-        if not booking or booking["moyasar_invoice_id"] != invoice_id:
+        payment = connection.execute(
+            """
+            SELECT * FROM payments
+            WHERE reference=? AND booking_id=?
+            """,
+            (invoice_id, booking_id),
+        ).fetchone() if booking_id else None
+
+        if (
+            not booking
+            or str(booking["moyasar_invoice_id"] or "") != invoice_id
+            or not payment
+        ):
             flash("تعذر مطابقة عملية الدفع مع الحجز.", "error")
+
         elif (
             invoice_data.get("status") == "paid"
-            and invoice_data.get("amount")
-                == round(max(
-                    0,
-                    float(booking["price"]) - float(booking["paid"])
-                ) * 100)
+            and invoice_data.get("amount") == round(float(payment["amount"]) * 100)
             and invoice_data.get("currency") == "SAR"
         ):
             flash(
-                "تم التحقق من الدفع. إذا لم يتحدث الرصيد، انتظر إشعار الدفع.",
+                "تم التحقق من الفاتورة. يجري تحديث الرصيد عبر إشعار الدفع.",
                 "ok",
             )
+
         else:
             flash(
                 "لم يتم تأكيد الدفع بعد. حالة الفاتورة: "
@@ -2466,11 +2466,12 @@ def moyasar_return():
                 "error",
             )
 
-    except (requests.RequestException, ValueError):
+    except (requests.RequestException, ValueError, RuntimeError):
         app.logger.exception("Moyasar return verification failed")
-        flash("تعذر التحقق من الدفع الآن. حاول تحديث الحجوزات لاحقاً.", "error")
+        flash("تعذر التحقق من الدفع الآن. حاول لاحقاً.", "error")
 
     finally:
         connection.close()
 
     return redirect(url_for("bookings"))
+
