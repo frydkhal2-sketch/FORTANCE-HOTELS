@@ -1,320 +1,160 @@
-
+```html
 {% extends "base.html" %}
 
 {% block content %}
-<style>
-.rooms-page {
-    direction: rtl;
-    color: #10233f;
-}
-.rooms-heading {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 14px;
-    flex-wrap: wrap;
-    margin-bottom: 22px;
-}
-.rooms-heading h1 {
-    margin: 0 0 6px;
-    font-size: 27px;
-}
-.rooms-muted {
-    color: #718096;
-    font-size: 14px;
-}
-.rooms-stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
-    gap: 13px;
-    margin-bottom: 24px;
-}
-.rooms-stat {
-    background: #fff;
-    border: 1px solid #e6ebf2;
-    border-radius: 15px;
-    padding: 17px;
-    box-shadow: 0 4px 15px #10233f08;
-}
-.rooms-stat span {
-    display: block;
-    color: #68778d;
-    font-size: 13px;
-    margin-bottom: 9px;
-}
-.rooms-stat strong {
-    font-size: 27px;
-}
-.rooms-panel {
-    background: #fff;
-    border: 1px solid #e6ebf2;
-    border-radius: 16px;
-    padding: 20px;
-    margin-bottom: 22px;
-}
-.rooms-panel h2 {
-    font-size: 19px;
-    margin: 0 0 17px;
-}
-.rooms-form {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 13px;
-    align-items: end;
-}
-.rooms-form label {
-    display: block;
-    font-size: 13px;
-    margin-bottom: 7px;
-    font-weight: 600;
-}
-.rooms-form input,
-.rooms-form select,
-.rooms-filter select {
-    box-sizing: border-box;
-    width: 100%;
-    min-height: 43px;
-    border: 1px solid #d9e1ec;
-    border-radius: 9px;
-    padding: 9px 11px;
-    background: #fff;
-    font: inherit;
-}
-.rooms-button {
-    min-height: 43px;
-    border: 0;
-    border-radius: 9px;
-    padding: 10px 17px;
-    background: #102844;
-    color: #fff;
-    font-weight: 700;
-    cursor: pointer;
-}
-.rooms-filter {
-    display: flex;
-    align-items: end;
-    gap: 10px;
-    flex-wrap: wrap;
-    margin-bottom: 18px;
-}
-.rooms-filter > div {
-    min-width: 220px;
-}
-.rooms-filter label {
-    display: block;
-    font-size: 13px;
-    margin-bottom: 7px;
-}
-.rooms-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 15px;
-}
-.room-card {
-    border: 1px solid;
-    border-radius: 15px;
-    padding: 17px;
-    min-height: 145px;
-}
-.room-card.vacant {
-    background: #eaf8ef;
-    border-color: #b7e4c7;
-}
-.room-card.occupied {
-    background: #fff0ef;
-    border-color: #f4c1bd;
-}
-.room-card.checkout_today {
-    background: #fff5df;
-    border-color: #f1d49a;
-}
-.room-card.upcoming {
-    background: #edf4ff;
-    border-color: #c4d8ff;
-}
-.room-card-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: start;
-    gap: 8px;
-}
-.room-number {
-    font-size: 23px;
-    font-weight: 800;
-    margin: 0;
-}
-.room-badge {
-    display: inline-block;
-    padding: 5px 9px;
-    border-radius: 20px;
-    background: #fff;
-    font-size: 12px;
-    font-weight: 700;
-    white-space: nowrap;
-}
-.vacant .room-badge { color: #167341; }
-.occupied .room-badge { color: #b42318; }
-.checkout_today .room-badge { color: #946200; }
-.upcoming .room-badge { color: #175cd3; }
-.room-hotel {
-    font-weight: 700;
-    margin: 13px 0 5px;
-}
-.room-details {
-    font-size: 13px;
-    color: #5d6b7e;
-    line-height: 1.8;
-}
-.rooms-empty {
-    text-align: center;
-    padding: 35px 15px;
-    color: #718096;
-    border: 1px dashed #ccd5e1;
-    border-radius: 12px;
-}
-@media (max-width: 600px) {
-    .rooms-panel { padding: 15px; }
-    .rooms-heading h1 { font-size: 23px; }
-}
-</style>
-
-<div class="rooms-page">
-    <div class="rooms-heading">
-        <div>
-            <h1>إدارة الغرف</h1>
-            <div class="rooms-muted">
-                متابعة الغرف وحالاتها حسب الحجوزات وتواريخ الإقامة.
-            </div>
-        </div>
+<div class="pagehead">
+    <div>
+        <h1>🛏️ إدارة الغرف</h1>
+        <p class="muted">إضافة الغرف ومتابعة الإشغال والصيانة والتنظيف</p>
     </div>
+</div>
 
-    <div class="rooms-stats">
-        <div class="rooms-stat">
-            <span>إجمالي الغرف</span>
-            <strong>{{ counts.total }}</strong>
-        </div>
-        <div class="rooms-stat">
-            <span>الغرف الشاغرة</span>
-            <strong style="color:#16803d">{{ counts.vacant }}</strong>
-        </div>
-        <div class="rooms-stat">
-            <span>الغرف المشغولة</span>
-            <strong style="color:#b42318">{{ counts.occupied }}</strong>
-        </div>
-        <div class="rooms-stat">
-            <span>مغادرة اليوم</span>
-            <strong style="color:#9a6700">{{ counts.checkout_today }}</strong>
-        </div>
-        <div class="rooms-stat">
-            <span>حجوزات مستقبلية</span>
-            <strong style="color:#175cd3">{{ counts.upcoming }}</strong>
-        </div>
+<div class="grid">
+    {% for key, label in [
+        ('vacant', 'شاغرة'),
+        ('occupied', 'مشغولة'),
+        ('checkout_today', 'خروج اليوم'),
+        ('upcoming', 'حجوزات قادمة'),
+        ('maintenance', 'صيانة'),
+        ('cleaning', 'تنظيف'),
+        ('out_of_service', 'خارج الخدمة')
+    ] %}
+    <div class="stat">
+        <small>{{ label }}</small>
+        <h2>{{ counts.get(key, 0) }}</h2>
     </div>
+    {% endfor %}
+</div>
 
-    <section class="rooms-panel">
-        <h2>إضافة غرفة جديدة</h2>
+<div class="panel">
+    <h3>➕ إضافة مجموعة غرف دفعة واحدة</h3>
 
-        {% if hotels %}
-        <form method="POST" action="{{ url_for('rooms') }}" class="rooms-form">
-            <div>
-                <label for="hotel_id">الفندق</label>
-                <select id="hotel_id" name="hotel_id" required>
-                    <option value="">اختر الفندق</option>
-                    {% for hotel in hotels %}
-                    <option value="{{ hotel.id }}"
-                        {% if selected_hotel|string == hotel.id|string %}selected{% endif %}>
-                        {{ hotel.name }}
-                    </option>
+    <form method="post" action="/rooms">
+        <input type="hidden" name="action" value="bulk">
+
+        <div class="formgrid">
+            <div class="field">
+                <label>الفندق</label>
+                <select name="hotel_id" required>
+                    {% for h in hotels %}
+                    <option value="{{ h.id }}">{{ h.name }}</option>
                     {% endfor %}
                 </select>
             </div>
 
-            <div>
-                <label for="number">رقم الغرفة</label>
-                <input id="number" name="number" required
-                       placeholder="مثال: 101">
+            <div class="field">
+                <label>من رقم غرفة</label>
+                <input type="number" name="start_number"
+                       min="1" required>
             </div>
 
-            <div>
-                <label for="room_type">نوع الغرفة</label>
-                <select id="room_type" name="room_type" required>
-                    <option value="">اختر النوع</option>
+            <div class="field">
+                <label>إلى رقم غرفة</label>
+                <input type="number" name="end_number"
+                       min="1" required>
+            </div>
+
+            <div class="field">
+                <label>نوع الغرفة</label>
+                <select name="room_type">
                     <option value="مفردة">مفردة</option>
                     <option value="مزدوجة">مزدوجة</option>
                     <option value="ثلاثية">ثلاثية</option>
                     <option value="رباعية">رباعية</option>
                     <option value="جناح">جناح</option>
-                    <option value="أخرى">أخرى</option>
                 </select>
             </div>
 
-            <div>
-                <label for="price">سعر الليلة (ريال)</label>
-                <input id="price" name="price" type="number"
-                       min="0" step="0.01" required placeholder="0.00">
+            <div class="field">
+                <label>السعر لليلة (ريال)</label>
+                <input type="number" name="price"
+                       min="0" step="0.01" value="0">
             </div>
 
-            <button type="submit" class="rooms-button">+ إضافة الغرفة</button>
-        </form>
-        {% else %}
-        <div class="rooms-empty">
-            لا توجد فنادق مسجلة حتى الآن. أضف فندقًا أولًا من قسم الفنادق.
-        </div>
-        {% endif %}
-    </section>
-
-    <section class="rooms-panel">
-        <h2>الغرف المسجلة</h2>
-
-        <form method="GET" action="{{ url_for('rooms') }}" class="rooms-filter">
-            <div>
-                <label for="filter_hotel">عرض غرف فندق محدد</label>
-                <select id="filter_hotel" name="hotel_id">
-                    <option value="">جميع الفنادق</option>
-                    {% for hotel in hotels %}
-                    <option value="{{ hotel.id }}"
-                        {% if selected_hotel|string == hotel.id|string %}selected{% endif %}>
-                        {{ hotel.name }}
-                    </option>
-                    {% endfor %}
+            <div class="field">
+                <label>الحالة الأولية</label>
+                <select name="status">
+                    <option value="available">متاحة</option>
+                    <option value="maintenance">صيانة</option>
+                    <option value="cleaning">تنظيف</option>
+                    <option value="out_of_service">خارج الخدمة</option>
                 </select>
             </div>
-            <button type="submit" class="rooms-button">عرض الغرف</button>
-            <a href="{{ url_for('rooms') }}" style="align-self:center">إلغاء التصفية</a>
-        </form>
-
-        {% if rooms %}
-        <div class="rooms-grid">
-            {% for room in rooms %}
-            <article class="room-card {{ room.room_status }}">
-                <div class="room-card-top">
-                    <h3 class="room-number">غرفة {{ room.number }}</h3>
-
-                    {% if room.room_status == "vacant" %}
-                        <span class="room-badge">شاغرة</span>
-                    {% elif room.room_status == "occupied" %}
-                        <span class="room-badge">مشغولة</span>
-                    {% elif room.room_status == "checkout_today" %}
-                        <span class="room-badge">مغادرة اليوم</span>
-                    {% elif room.room_status == "upcoming" %}
-                        <span class="room-badge">حجز مستقبلي</span>
-                    {% endif %}
-                </div>
-
-                <div class="room-hotel">{{ room.hotel_name }}</div>
-                <div class="room-details">
-                    النوع: {{ room.room_type }}<br>
-                    سعر الليلة: {{ "%.2f"|format(room.price or 0) }} ريال
-                </div>
-            </article>
-            {% endfor %}
         </div>
-        {% else %}
-        <div class="rooms-empty">
-            لا توجد غرف لعرضها. أضف غرفة جديدة من النموذج أعلاه.
-        </div>
-        {% endif %}
-    </section>
+
+        <p>
+            <button type="submit" class="gold">
+                ➕ إضافة الغرف
+            </button>
+        </p>
+    </form>
+</div>
+
+<div class="panel">
+    <h3>📋 قائمة الغرف</h3>
+
+    <div class="tablewrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>الفندق</th>
+                    <th>رقم الغرفة</th>
+                    <th>النوع</th>
+                    <th>السعر</th>
+                    <th>الحالة</th>
+                    <th>تحديث الحالة</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for r in rooms %}
+                <tr>
+                    <td>{{ r.hotel }}</td>
+                    <td>{{ r.number }}</td>
+                    <td>{{ r.room_type }}</td>
+                    <td>{{ '%.2f'|format(r.price or 0) }} ريال</td>
+
+                    <td>
+                        <span class="tag">
+                            {{
+                                {
+                                    'vacant': 'شاغرة',
+                                    'occupied': 'مشغولة',
+                                    'checkout_today': 'خروج اليوم',
+                                    'upcoming': 'حجز قادم',
+                                    'available': 'متاحة',
+                                    'maintenance': 'صيانة',
+                                    'cleaning': 'تنظيف',
+                                    'out_of_service': 'خارج الخدمة'
+                                }.get(r.room_status, r.room_status)
+                            }}
+                        </span>
+                    </td>
+
+                    <td>
+                        <form method="post"
+                              action="/rooms/status/{{ r.id }}">
+                            <select name="status">
+                                <option value="available">متاحة</option>
+                                <option value="maintenance">صيانة</option>
+                                <option value="cleaning">تنظيف</option>
+                                <option value="out_of_service">خارج الخدمة</option>
+                            </select>
+                            <button type="submit">حفظ</button>
+                        </form>
+                    </td>
+                </tr>
+
+                {% else %}
+                <tr>
+                    <td colspan="6">
+                        لا توجد غرف حاليًا. استخدم النموذج أعلاه لإضافتها.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 {% endblock %}
-{% extends "base.html" %}{% block content %}<div class="pagehead"><div><h1>🛏️ إدارة الغرف</h1><p class="muted">إضافة غرفة أو مجموعة غرف ومتابعة حالتها</p></div></div><div class="grid">{% for key,label in [('vacant','شاغرة'),('occupied','مشغولة'),('checkout_today','خروج اليوم'),('upcoming','حجوزات قادمة'),('maintenance','صيانة'),('cleaning','تنظيف'),('out_of_service','خارج الخدمة')] %}<div class="stat"><small>{{ label }}</small><h2>{{ counts.get(key,0) }}</h2></div>{% endfor %}</div><div class="panel"><h3>إضافة عدة غرف دفعة واحدة</h3><form method="post"><input type="hidden" name="action" value="bulk"><div class="formgrid"><div class="field"><label>الفندق</label><select name="hotel_id" required>{% for h in hotels %}<option value="{{ h.id }}">{{ h.name }}</option>{% endfor %}</select></div><div class="field"><label>من رقم غرفة</label><input type="number" name="start_number" min="1" required></div><div class="field"><label>إلى رقم غرفة</label><input type="number" name="end_number" min="1" required></div><div class="field"><label>نوع الغرفة</label><select name="room_type"><option>مفردة</option><option>مزدوجة</option><option>ثلاثية</option><option>رباعية</option><option>جناح</option></select></div><div class="field"><label>السعر لليلة (ر.س)</label><input type="number" name="price" min="0" step=".01" value="0"></div><div class="field"><label>الحالة</label><select name="status"><option value="available">متاحة</option><option value="maintenance">صيانة</option><option value="cleaning">تنظيف</option><option value="out_of_service">خارج الخدمة</option></select></div></div><p><button class="gold">＋ إضافة الغرف المحددة</button></p></form></div><section class="panel"><h3>الغرف وحالاتها</h3><div class="tablewrap"><table><thead><tr><th>الفندق</th><th>الغرفة</th><th>النوع</th><th>السعر</th><th>الحالة الحالية</th><th>تحديث الحالة</th></tr></thead><tbody>{% for r in rooms %}<tr><td>{{ r.hotel }}</td><td>{{ r.number }}</td><td>{{ r.room_type }}</td><td>{{ '%.2f'|format(r.price or 0) }} ر.س</td><td><span class="tag">{{ {'vacant':'شاغرة','occupied':'مشغولة','checkout_today':'خروج اليوم','upcoming':'حجز قادم','available':'متاحة','maintenance':'صيانة','cleaning':'تنظيف','out_of_service':'خارج الخدمة'}.get(r.room_status,r.room_status) }}</span></td><td><form method="post" action="/rooms/status/{{ r.id }}"><select name="status"><option value="available">متاحة</option><option value="maintenance">صيانة</option><option value="cleaning">تنظيف</option><option value="out_of_service">خارج الخدمة</option></select> <button>حفظ</button></form></td></tr>{% else %}<tr><td colspan="6">لا توجد غرف. استخدم النموذج أعلاه لإضافتها.</td></tr>{% endfor %}</tbody></table></div></section>{% endblock %}
+```
