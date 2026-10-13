@@ -4,8 +4,7 @@ import os
 import hashlib
 import secrets
 from functools import wraps
-from datetime import datetime
-
+from datetime import datetime, date
 
 BASE = os.path.dirname(__file__)
 DB = os.path.join(BASE, "fortans.db")
@@ -17,11 +16,7 @@ app = Flask(
     static_url_path="/static"
 )
 
-app.secret_key = os.environ.get(
-    "FORTANCE_SECRET",
-    secrets.token_hex(32)
-)
-
+app.secret_key = os.environ.get("FORTANCE_SECRET", secrets.token_hex(32))
 
 ROLES = {
     "admin": "مدير النظام",
@@ -30,56 +25,61 @@ ROLES = {
     "accountant": "محاسب"
 }
 
-
-# =========================
-# قاعدة البيانات
-# =========================
-
-def db():
-    connection = sqlite3.connect(DB)
-    connection.row_factory = sqlite3.Row
-    return connection
-
-
-def hash_pw(password):
-    return hashlib.sha256(
-        password.encode("utf-8")
-    ).hexdigest()
-
-
-# =========================
-# الإعدادات
-# =========================
-
 DEFAULT_SETTINGS = {
     "company_name": "FORTANCE HOTELS",
     "company_phone": "",
     "company_email": "",
     "company_address": "",
-    "currency": "ريال سعودي"
+    "currency": "ريال سعودي",
+    "payment_url": "",
+    "payment_provider": ""
 }
 
 
-def get_settings():
-    connection = db()
+def db():
+    connection = sqlite3.connect(DB)
+    connection.row_factory = sqlite3.Row
+    connection.execute("PRAGMA foreign_keys=ON")
+    return connection
+
+
+def hash_pw(password):
+    return hashlib.sha256(password.encode("utf-8")).hexdigest()
+
+
+def ensure_column(connection, table, column, definition):
+    cols = {
+        row["name"]
+        for row in connection.execute(
+            f"PRAGMA table_info({table})"
+        ).fetchall()
+    }
+    if column not in cols:
+        connection.execute(
+            f"ALTER TABLE {table} ADD COLUMN {column} {definition}"
+        )
+
+
+def get_settings(connection=None):
+    own = connection is None
+    connection = connection or db()
 
     rows = connection.execute(
         "SELECT key, value FROM settings"
     ).fetchall()
 
-    connection.close()
-
     settings = DEFAULT_SETTINGS.copy()
 
     for row in rows:
-        settings[row["key"]] = row["value"]
+        settings[row["key"]] = row["value"] or ""
+
+    if own:
+        connection.close()
 
     return settings
 
 
-def save_setting(key, value):
-    connection = db()
-
+def save_setting(connection, key, value):
     connection.execute(
         """
         INSERT INTO settings(key, value)
@@ -90,13 +90,6 @@ def save_setting(key, value):
         (key, value)
     )
 
-    connection.commit()
-    connection.close()
-
-
-# =========================
-# إنشاء قاعدة البيانات
-# =========================
 
 def init_db():
     connection = db()
@@ -141,6 +134,18 @@ def init_db():
             created_at TEXT NOT NULL
         );
 
+        CREATE TABLE IF NOT EXISTS companies(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            contact_name TEXT,
+            phone TEXT,
+            email TEXT,
+            tax_number TEXT,
+            notes TEXT,
+            active INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT NOT NULL
+        );
+
         CREATE TABLE IF NOT EXISTS bookings(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             code TEXT UNIQUE NOT NULL,
@@ -160,6 +165,39 @@ def init_db():
             FOREIGN KEY(room_id) REFERENCES rooms(id)
         );
 
+        CREATE TABLE IF NOT EXISTS group_bookings(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            code TEXT UNIQUE NOT NULL,
+            group_name TEXT NOT NULL,
+            contact_name TEXT,
+            phone TEXT,
+            company_id INTEGER,
+            hotel_id INTEGER NOT NULL,
+            checkin TEXT NOT NULL,
+            checkout TEXT NOT NULL,
+            guests INTEGER NOT NULL DEFAULT 0,
+            rooms_count INTEGER NOT NULL DEFAULT 0,
+            total REAL NOT NULL DEFAULT 0,
+            paid REAL NOT NULL DEFAULT 0,
+            status TEXT NOT NULL DEFAULT 'confirmed',
+            notes TEXT,
+            created_by INTEGER,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY(company_id) REFERENCES companies(id),
+            FOREIGN KEY(hotel_id) REFERENCES hotels(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS group_booking_rooms(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            group_booking_id INTEGER NOT NULL,
+            room_id INTEGER NOT NULL,
+            price REAL NOT NULL DEFAULT 0,
+            FOREIGN KEY(group_booking_id)
+                REFERENCES group_bookings(id)
+                ON DELETE CASCADE,
+            FOREIGN KEY(room_id) REFERENCES rooms(id)
+        );
+
         CREATE TABLE IF NOT EXISTS seasons(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
@@ -172,23 +210,59 @@ def init_db():
             key TEXT PRIMARY KEY,
             value TEXT
         );
+
+        CREATE TABLE IF NOT EXISTS payments(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            booking_id INTEGER,
+            group_booking_id INTEGER,
+            amount REAL NOT NULL,
+            method TEXT,
+            payment_url TEXT,
+            status TEXT NOT NULL DEFAULT 'pending',
+            reference TEXT,
+            created_at TEXT NOT NULL,
+            created_by INTEGER
+        );
         """
     )
 
-    # إنشاء حساب مدير النظام إذا لم يوجد
-    employee_count = connection.execute(
-        "SELECT COUNT(*) AS n FROM employees"
-    ).fetchone()["n"]
+    # إضافة أعمدة جديدة للقاعدة الحالية بدون حذف البيانات القديمة.
+    ensure_column(
+        connection, "bookings", "payment_method",
+        "TEXT DEFAULT 'cash'"
+    )
+    ensure_column(
+        connection, "bookings", "payment_url",
+        "TEXT DEFAULT ''"
+    )
+    ensure_column(
+        connection, "bookings", "company_id",
+        "INTEGER"
+    )
+    ensure_column(
+        connection, "bookings", "group_booking_id",
+        "INTEGER"
+    )
 
-    if employee_count == 0:
+    for key, value in DEFAULT_SETTINGS.items():
+        exists = connection.execute(
+            "SELECT 1 FROM settings WHERE key=?",
+            (key,)
+        ).fetchone()
+
+        if exists is None:
+            connection.execute(
+                "INSERT INTO settings(key,value) VALUES(?,?)",
+                (key, value)
+            )
+
+    if connection.execute(
+        "SELECT COUNT(*) AS n FROM employees"
+    ).fetchone()["n"] == 0:
         connection.execute(
             """
             INSERT INTO employees(
-                name,
-                username,
-                password,
-                role,
-                created_at
+                name, username, password, role, created_at
             )
             VALUES(?,?,?,?,?)
             """,
@@ -201,46 +275,42 @@ def init_db():
             )
         )
 
-    # إنشاء فندق افتراضي واحد فقط إذا لم يوجد أي فندق
-    hotel_count = connection.execute(
+    if connection.execute(
         "SELECT COUNT(*) AS n FROM hotels"
-    ).fetchone()["n"]
-
-    if hotel_count == 0:
+    ).fetchone()["n"] == 0:
         connection.execute(
-            """
-            INSERT INTO hotels(name, city, phone)
-            VALUES(?,?,?)
-            """,
-            (
-                "فندق ريان الجوار",
-                "مكة المكرمة",
-                ""
-            )
+            "INSERT INTO hotels(name,city,phone) VALUES(?,?,?)",
+            ("فندق ريان الجوار", "مكة المكرمة", "")
         )
 
-    # تنظيف الغرف التجريبية القديمة مرة واحدة
-    cleanup_done = connection.execute(
-        "SELECT value FROM settings WHERE key='initial_rooms_cleanup'"
+    # إزالة الغرف التجريبية القديمة مرة واحدة فقط،
+    # وفقط إذا لم توجد حجوزات حالية مرتبطة بها.
+    cleanup = connection.execute(
+        """
+        SELECT value
+        FROM settings
+        WHERE key='initial_rooms_cleanup'
+        """
     ).fetchone()
 
-    if not cleanup_done:
-        connection.execute("DELETE FROM rooms")
+    if cleanup is None:
+        booked_rooms = connection.execute(
+            "SELECT COUNT(*) AS n FROM bookings"
+        ).fetchone()["n"]
+
+        if booked_rooms == 0:
+            connection.execute("DELETE FROM rooms")
 
         connection.execute(
             """
-            INSERT INTO settings(key, value)
-            VALUES('initial_rooms_cleanup', 'done')
+            INSERT INTO settings(key,value)
+            VALUES('initial_rooms_cleanup','done')
             """
         )
 
     connection.commit()
     connection.close()
 
-
-# =========================
-# الصلاحيات
-# =========================
 
 def login_required(function):
     @wraps(function)
@@ -261,17 +331,12 @@ def admin_required(function):
                 "هذه الصفحة متاحة لمدير النظام فقط.",
                 "error"
             )
-
             return redirect(url_for("dashboard"))
 
         return function(*args, **kwargs)
 
     return wrapper
 
-
-# =========================
-# بيانات عامة للقوالب
-# =========================
 
 @app.context_processor
 def ctx():
@@ -283,9 +348,52 @@ def ctx():
     }
 
 
-# =========================
-# الرئيسية
-# =========================
+def room_conflict(
+    connection,
+    room_id,
+    checkin,
+    checkout,
+    exclude_booking_id=None
+):
+    sql = """
+        SELECT id
+        FROM bookings
+        WHERE room_id=?
+          AND status='confirmed'
+          AND checkin < ?
+          AND checkout > ?
+    """
+
+    params = [room_id, checkout, checkin]
+
+    if exclude_booking_id is not None:
+        sql += " AND id != ?"
+        params.append(exclude_booking_id)
+
+    return connection.execute(sql, params).fetchone() is not None
+
+
+def group_room_conflict(
+    connection,
+    room_id,
+    checkin,
+    checkout
+):
+    return connection.execute(
+        """
+        SELECT gbr.id
+        FROM group_booking_rooms gbr
+        JOIN group_bookings gb
+            ON gb.id=gbr.group_booking_id
+        WHERE gbr.room_id=?
+          AND gb.status='confirmed'
+          AND gb.checkin < ?
+          AND gb.checkout > ?
+        LIMIT 1
+        """,
+        (room_id, checkout, checkin)
+    ).fetchone() is not None
+
 
 @app.route("/")
 def index():
@@ -295,17 +403,16 @@ def index():
     return redirect(url_for("login"))
 
 
-# =========================
-# تسجيل الدخول
-# =========================
-
 @app.route("/login", methods=["GET", "POST"])
 def login():
-
     if request.method == "POST":
+        username = request.form.get(
+            "username", ""
+        ).strip()
 
-        username = request.form.get("username", "").strip()
-        password = request.form.get("password", "")
+        password = request.form.get(
+            "password", ""
+        )
 
         connection = db()
 
@@ -322,7 +429,6 @@ def login():
         connection.close()
 
         if user and user["password"] == hash_pw(password):
-
             session.update(
                 uid=user["id"],
                 name=user["name"],
@@ -339,24 +445,15 @@ def login():
     return render_template("login.html")
 
 
-# =========================
-# تسجيل الخروج
-# =========================
-
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect(url_for("login"))
 
 
-# =========================
-# لوحة التحكم
-# =========================
-
 @app.route("/dashboard")
 @login_required
 def dashboard():
-
     connection = db()
 
     data = {
@@ -410,7 +507,7 @@ def dashboard():
 
     connection.close()
 
-    data["now"] = datetime.now().strftime("%Y-%m-%d")
+    data["now"] = date.today().isoformat()
 
     return render_template(
         "dashboard.html",
@@ -418,34 +515,24 @@ def dashboard():
     )
 
 
-# =========================
-# الموظفون
-# =========================
-
 @app.route("/employees", methods=["GET", "POST"])
 @login_required
 @admin_required
 def employees():
-
     connection = db()
 
     if request.method == "POST":
-
         try:
             connection.execute(
                 """
                 INSERT INTO employees(
-                    name,
-                    username,
-                    password,
-                    role,
-                    created_at
+                    name, username, password, role, created_at
                 )
                 VALUES(?,?,?,?,?)
                 """,
                 (
-                    request.form["name"],
-                    request.form["username"],
+                    request.form["name"].strip(),
+                    request.form["username"].strip(),
                     hash_pw(request.form["password"]),
                     request.form["role"],
                     datetime.now().isoformat()
@@ -455,12 +542,11 @@ def employees():
             connection.commit()
 
             flash(
-                "تمت إضافة الموظف بنجاح.",
+                "تمت إضافة الموظف.",
                 "ok"
             )
 
         except sqlite3.IntegrityError:
-
             flash(
                 "اسم المستخدم مستخدم بالفعل.",
                 "error"
@@ -468,13 +554,7 @@ def employees():
 
     rows = connection.execute(
         """
-        SELECT
-            id,
-            name,
-            username,
-            role,
-            active,
-            created_at
+        SELECT id,name,username,role,active,created_at
         FROM employees
         ORDER BY id DESC
         """
@@ -495,16 +575,12 @@ def employees():
 @login_required
 @admin_required
 def toggle_employee(eid):
-
     if eid == session["uid"]:
-
         flash(
             "لا يمكنك تعطيل حسابك الحالي.",
             "error"
         )
-
     else:
-
         connection = db()
 
         connection.execute(
@@ -519,38 +595,25 @@ def toggle_employee(eid):
         connection.commit()
         connection.close()
 
-    return redirect(
-        url_for("employees")
-    )
+    return redirect(url_for("employees"))
 
-
-# =========================
-# الفنادق
-# =========================
 
 @app.route("/hotels", methods=["GET", "POST"])
 @login_required
 def hotels():
-
     connection = db()
 
     if request.method == "POST":
-
         connection.execute(
             """
-            INSERT INTO hotels(
-                name,
-                city,
-                phone,
-                notes
-            )
+            INSERT INTO hotels(name,city,phone,notes)
             VALUES(?,?,?,?)
             """,
             (
-                request.form["name"],
-                request.form["city"],
-                request.form["phone"],
-                request.form["notes"]
+                request.form["name"].strip(),
+                request.form.get("city", "").strip(),
+                request.form.get("phone", "").strip(),
+                request.form.get("notes", "").strip()
             )
         )
 
@@ -582,199 +645,500 @@ def hotels():
         hotels=rows
     )
 
+
 def get_room_status(room_id, today, bookings):
-    """
-    تحديد حالة الغرفة من الحجوزات الفعلية:
-    vacant = شاغرة
-    occupied = مشغولة
-    checkout_today = مغادرة اليوم
-    upcoming = لديها حجز مستقبلي
-    """
-    room_bookings = [
-        b for b in bookings
-        if b["room_id"] == room_id
-    ]
+    for booking in bookings:
+        if booking["room_id"] != room_id:
+            continue
 
-    for booking in room_bookings:
-        checkin = booking["checkin"] or ""
-        checkout = booking["checkout"] or ""
-
-        if checkin <= today < checkout:
+        if booking["checkin"] <= today < booking["checkout"]:
             return "occupied"
 
-    for booking in room_bookings:
-        checkin = booking["checkin"] or ""
-        checkout = booking["checkout"] or ""
-
-        if checkin <= today and checkout == today:
+        if booking["checkout"] == today:
             return "checkout_today"
 
-    for booking in room_bookings:
-        checkin = booking["checkin"] or ""
-        checkout = booking["checkout"] or ""
-
-        if checkin > today and checkout > today:
+        if booking["checkin"] > today:
             return "upcoming"
 
     return "vacant"
 
 
 @app.route("/rooms", methods=["GET", "POST"])
+@login_required
 def rooms():
-    from datetime import date
+    connection = db()
 
     today = date.today().isoformat()
-    selected_hotel = request.args.get("hotel_id", "").strip()
+    selected_hotel = request.args.get(
+        "hotel_id", ""
+    )
 
-    con = sqlite3.connect(DB)
-    con.row_factory = sqlite3.Row
-
-    try:
-        if request.method == "POST":
-            hotel_id = request.form.get("hotel_id", "").strip()
-            number = request.form.get("number", "").strip()
-            room_type = request.form.get("room_type", "").strip()
-            price_text = request.form.get("price", "").strip()
-
-            if not hotel_id or not number or not room_type or not price_text:
-                flash("يرجى تعبئة جميع بيانات الغرفة.", "error")
-                return redirect(url_for("rooms"))
-
-            try:
-                price = float(price_text)
-                if price < 0:
-                    raise ValueError
-            except ValueError:
-                flash("يرجى إدخال سعر صحيح للغرفة.", "error")
-                return redirect(url_for("rooms"))
-
-            hotel = con.execute(
-                "SELECT id FROM hotels WHERE id = ?",
-                (hotel_id,)
-            ).fetchone()
-
-            if not hotel:
-                flash("الفندق المحدد غير موجود.", "error")
-                return redirect(url_for("rooms"))
-
-            try:
-                con.execute(
-                    """
-                    INSERT INTO rooms
-                        (hotel_id, number, room_type, price, status)
-                    VALUES (?, ?, ?, ?, 'available')
-                    """,
-                    (hotel_id, number, room_type, price)
-                )
-                con.commit()
-                flash("تمت إضافة الغرفة بنجاح.", "success")
-
-            except sqlite3.IntegrityError:
-                flash("رقم الغرفة موجود مسبقًا في هذا الفندق.", "error")
-
-            return redirect(url_for("rooms", hotel_id=hotel_id))
-
-        hotels = con.execute(
-            "SELECT id, name FROM hotels ORDER BY name"
-        ).fetchall()
-
-        query = """
-            SELECT
-                r.id,
-                r.hotel_id,
-                r.number,
-                r.room_type,
-                r.price,
-                h.name AS hotel_name
-            FROM rooms r
-            JOIN hotels h ON h.id = r.hotel_id
-        """
-        params = []
-
-        if selected_hotel:
-            query += " WHERE r.hotel_id = ?"
-            params.append(selected_hotel)
-
-        query += " ORDER BY h.name, r.number"
-
-        room_rows = con.execute(query, params).fetchall()
-
-        booking_rows = con.execute(
-            """
-            SELECT room_id, checkin, checkout, status
-            FROM bookings
-            WHERE checkout >= ?
-            """,
-            (today,)
-        ).fetchall()
-
-        cancelled_statuses = {
-            "cancelled", "canceled", "rejected",
-            "ملغي", "ملغاة", "ملغيّة"
-        }
-
-        active_bookings = [
-            dict(b)
-            for b in booking_rows
-            if (b["status"] or "").strip().lower()
-            not in cancelled_statuses
-        ]
-
-        room_list = []
-
-        for room in room_rows:
-            room_data = dict(room)
-            room_data["room_status"] = get_room_status(
-                room_data["id"],
-                today,
-                active_bookings
-            )
-            room_list.append(room_data)
-
-        counts = {
-            "total": len(room_list),
-            "vacant": sum(
-                r["room_status"] == "vacant" for r in room_list
-            ),
-            "occupied": sum(
-                r["room_status"] == "occupied" for r in room_list
-            ),
-            "checkout_today": sum(
-                r["room_status"] == "checkout_today" for r in room_list
-            ),
-            "upcoming": sum(
-                r["room_status"] == "upcoming" for r in room_list
-            ),
-        }
-
-        return render_template(
-            "rooms.html",
-            hotels=hotels,
-            rooms=room_list,
-            counts=counts,
-            selected_hotel=selected_hotel,
-            today=today
+    if request.method == "POST":
+        action = request.form.get(
+            "action", "single"
         )
 
-    finally:
-        con.close()
+        hotel_id = request.form.get(
+            "hotel_id", ""
+        ).strip()
+
+        room_type = request.form.get(
+            "room_type", ""
+        ).strip()
+
+        status = request.form.get(
+            "status", "available"
+        )
+
+        if action == "bulk":
+            try:
+                start = int(
+                    request.form["start_number"]
+                )
+
+                end = int(
+                    request.form["end_number"]
+                )
+
+                price = float(
+                    request.form.get(
+                        "price", "0"
+                    ) or 0
+                )
+
+                if (
+                    end < start
+                    or end - start > 1000
+                    or price < 0
+                    or not hotel_id
+                ):
+                    raise ValueError
+
+                created = 0
+
+                for number in range(
+                    start,
+                    end + 1
+                ):
+                    try:
+                        connection.execute(
+                            """
+                            INSERT INTO rooms(
+                                hotel_id,
+                                number,
+                                room_type,
+                                price,
+                                status
+                            )
+                            VALUES(?,?,?,?,?)
+                            """,
+                            (
+                                hotel_id,
+                                str(number),
+                                room_type,
+                                price,
+                                status
+                            )
+                        )
+
+                        created += 1
+
+                    except sqlite3.IntegrityError:
+                        pass
+
+                connection.commit()
+
+                flash(
+                    f"تم إنشاء {created} غرفة بنجاح.",
+                    "ok"
+                )
+
+            except (
+                ValueError,
+                TypeError
+            ):
+                flash(
+                    "بيانات نطاق الغرف غير صحيحة.",
+                    "error"
+                )
+
+            connection.close()
+
+            return redirect(
+                url_for(
+                    "rooms",
+                    hotel_id=hotel_id
+                )
+            )
+
+        number = request.form.get(
+            "number", ""
+        ).strip()
+
+        try:
+            price = float(
+                request.form.get(
+                    "price", "0"
+                ) or 0
+            )
+
+            if (
+                not hotel_id
+                or not number
+                or price < 0
+            ):
+                raise ValueError
+
+            connection.execute(
+                """
+                INSERT INTO rooms(
+                    hotel_id,
+                    number,
+                    room_type,
+                    price,
+                    status
+                )
+                VALUES(?,?,?,?,?)
+                """,
+                (
+                    hotel_id,
+                    number,
+                    room_type,
+                    price,
+                    status
+                )
+            )
+
+            connection.commit()
+
+            flash(
+                "تمت إضافة الغرفة بنجاح.",
+                "ok"
+            )
+
+        except (
+            ValueError,
+            sqlite3.IntegrityError
+        ):
+            flash(
+                "تعذر إضافة الغرفة. "
+                "تأكد من البيانات ورقم الغرفة.",
+                "error"
+            )
+
+        connection.close()
+
+        return redirect(
+            url_for(
+                "rooms",
+                hotel_id=hotel_id
+            )
+        )
+
+    hotels_list = connection.execute(
+        """
+        SELECT id,name
+        FROM hotels
+        WHERE active=1
+        ORDER BY name
+        """
+    ).fetchall()
+
+    room_rows = connection.execute(
+        """
+        SELECT
+            r.*,
+            h.name AS hotel_name
+        FROM rooms r
+        JOIN hotels h
+            ON h.id=r.hotel_id
+        WHERE (?='' OR r.hotel_id=?)
+        ORDER BY h.name,r.number
+        """,
+        (
+            selected_hotel,
+            selected_hotel
+        )
+    ).fetchall()
+
+    booking_rows = connection.execute(
+        """
+        SELECT
+            room_id,
+            checkin,
+            checkout,
+            status
+        FROM bookings
+        WHERE checkout>=?
+        AND status='confirmed'
+        """,
+        (today,)
+    ).fetchall()
+
+    group_rows = connection.execute(
+        """
+        SELECT
+            gbr.room_id,
+            gb.checkin,
+            gb.checkout,
+            gb.status
+        FROM group_booking_rooms gbr
+        JOIN group_bookings gb
+            ON gb.id=gbr.group_booking_id
+        WHERE gb.checkout>=?
+        AND gb.status='confirmed'
+        """,
+        (today,)
+    ).fetchall()
+
+    all_bookings = [
+        dict(row)
+        for row in booking_rows
+    ] + [
+        dict(row)
+        for row in group_rows
+    ]
+
+    room_list = []
+
+    for room in room_rows:
+        item = dict(room)
+
+        item["room_status"] = item["status"]
+
+        if item["status"] == "available":
+            item["room_status"] = get_room_status(
+                item["id"],
+                today,
+                all_bookings
+            )
+
+        room_list.append(item)
+
+    counts = {
+        "total": len(room_list),
+        "vacant": sum(
+            x["room_status"] == "vacant"
+            for x in room_list
+        ),
+        "occupied": sum(
+            x["room_status"] == "occupied"
+            for x in room_list
+        ),
+        "checkout_today": sum(
+            x["room_status"] == "checkout_today"
+            for x in room_list
+        ),
+        "upcoming": sum(
+            x["room_status"] == "upcoming"
+            for x in room_list
+        ),
+        "maintenance": sum(
+            x["room_status"] == "maintenance"
+            for x in room_list
+        ),
+        "out_of_service": sum(
+            x["room_status"] == "out_of_service"
+            for x in room_list
+        ),
+        "cleaning": sum(
+            x["room_status"] == "cleaning"
+            for x in room_list
+        )
+    }
+
+    connection.close()
+
+    return render_template(
+        "rooms.html",
+        hotels=hotels_list,
+        rooms=room_list,
+        counts=counts,
+        selected_hotel=selected_hotel,
+        today=today
+    )
 
 
-
-# =========================
-# الحجوزات
-# =========================
-
-@app.route("/bookings", methods=["GET", "POST"])
+@app.route(
+    "/rooms/status/<int:rid>",
+    methods=["POST"]
+)
 @login_required
-def bookings():
+def room_status(rid):
+    status = request.form.get(
+        "status",
+        "available"
+    )
+
+    allowed = {
+        "available",
+        "maintenance",
+        "out_of_service",
+        "cleaning"
+    }
+
+    if status not in allowed:
+        flash(
+            "حالة الغرفة غير صحيحة.",
+            "error"
+        )
+
+        return redirect(
+            url_for("rooms")
+        )
 
     connection = db()
 
-    if request.method == "POST":
+    connection.execute(
+        """
+        UPDATE rooms
+        SET status=?
+        WHERE id=?
+        """,
+        (status, rid)
+    )
 
-        name = request.form["customer"]
-        phone = request.form["phone"]
+    connection.commit()
+    connection.close()
+
+    flash(
+        "تم تحديث حالة الغرفة.",
+        "ok"
+    )
+
+    return redirect(
+        url_for("rooms")
+    )
+
+
+@app.route(
+    "/bookings",
+    methods=["GET", "POST"]
+)
+@login_required
+def bookings():
+    connection = db()
+
+    if request.method == "POST":
+        name = request.form.get(
+            "customer", ""
+        ).strip()
+
+        phone = request.form.get(
+            "phone", ""
+        ).strip()
+
+        hotel_id = request.form.get(
+            "hotel_id"
+        )
+
+        room_id = request.form.get(
+            "room_id"
+        )
+
+        checkin = request.form.get(
+            "checkin", ""
+        )
+
+        checkout = request.form.get(
+            "checkout", ""
+        )
+
+        try:
+            ci = datetime.fromisoformat(
+                checkin
+            )
+
+            co = datetime.fromisoformat(
+                checkout
+            )
+
+            nights = (
+                co - ci
+            ).days
+
+            if nights <= 0:
+                raise ValueError
+
+        except ValueError:
+            connection.close()
+
+            flash(
+                "تاريخ الخروج يجب أن يكون "
+                "بعد تاريخ الدخول.",
+                "error"
+            )
+
+            return redirect(
+                url_for("bookings")
+            )
+
+        room = connection.execute(
+            """
+            SELECT *
+            FROM rooms
+            WHERE id=?
+            AND hotel_id=?
+            """,
+            (
+                room_id,
+                hotel_id
+            )
+        ).fetchone()
+
+        if not room:
+            connection.close()
+
+            flash(
+                "الغرفة غير موجودة في الفندق المحدد.",
+                "error"
+            )
+
+            return redirect(
+                url_for("bookings")
+            )
+
+        if room["status"] in {
+            "maintenance",
+            "out_of_service",
+            "cleaning"
+        }:
+            connection.close()
+
+            flash(
+                "الغرفة غير متاحة بسبب حالتها الحالية.",
+                "error"
+            )
+
+            return redirect(
+                url_for("bookings")
+            )
+
+        if (
+            room_conflict(
+                connection,
+                room_id,
+                checkin,
+                checkout
+            )
+            or group_room_conflict(
+                connection,
+                room_id,
+                checkin,
+                checkout
+            )
+        ):
+            connection.close()
+
+            flash(
+                "هذه الغرفة محجوزة في الفترة "
+                "المحددة. اختر غرفة أو تاريخًا آخر.",
+                "error"
+            )
+
+            return redirect(
+                url_for("bookings")
+            )
 
         customer = connection.execute(
             """
@@ -789,8 +1153,19 @@ def bookings():
         if customer:
             customer_id = customer["id"]
 
-        else:
+            connection.execute(
+                """
+                UPDATE customers
+                SET name=?
+                WHERE id=?
+                """,
+                (
+                    name,
+                    customer_id
+                )
+            )
 
+        else:
             cursor = connection.execute(
                 """
                 INSERT INTO customers(
@@ -811,50 +1186,41 @@ def bookings():
 
             customer_id = cursor.lastrowid
 
-        room = connection.execute(
-            """
-            SELECT *
-            FROM rooms
-            WHERE id=?
-            AND status='available'
-            """,
-            (request.form["room_id"],)
-        ).fetchone()
+        price = (
+            float(room["price"])
+            * nights
+        )
 
-        if not room:
-
-            connection.close()
-
-            flash(
-                "الغرفة غير متاحة للحجز.",
-                "error"
+        paid = max(
+            0,
+            float(
+                request.form.get(
+                    "paid", "0"
+                ) or 0
             )
-
-            return redirect(
-                url_for("bookings")
-            )
-
-        checkin = datetime.fromisoformat(
-            request.form["checkin"]
         )
 
-        checkout = datetime.fromisoformat(
-            request.form["checkout"]
+        paid = min(
+            paid,
+            price
         )
-
-        nights = max(
-            1,
-            (checkout - checkin).days
-        )
-
-        price = float(room["price"]) * nights
 
         code = (
             "BK-"
             + secrets.token_hex(3).upper()
         )
 
-        connection.execute(
+        payment_method = request.form.get(
+            "payment_method",
+            "cash"
+        )
+
+        payment_url = request.form.get(
+            "payment_url",
+            ""
+        ).strip()
+
+        cursor = connection.execute(
             """
             INSERT INTO bookings(
                 code,
@@ -868,25 +1234,31 @@ def bookings():
                 paid,
                 status,
                 created_by,
-                created_at
+                created_at,
+                payment_method,
+                payment_url
             )
-            VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """,
             (
                 code,
                 customer_id,
-                request.form["hotel_id"],
-                request.form["room_id"],
-                request.form["checkin"],
-                request.form["checkout"],
+                hotel_id,
+                room_id,
+                checkin,
+                checkout,
                 nights,
                 price,
-                float(request.form["paid"] or 0),
+                paid,
                 "confirmed",
                 session["uid"],
-                datetime.now().isoformat()
+                datetime.now().isoformat(),
+                payment_method,
+                payment_url
             )
         )
+
+        booking_id = cursor.lastrowid
 
         connection.execute(
             """
@@ -894,8 +1266,33 @@ def bookings():
             SET status='booked'
             WHERE id=?
             """,
-            (request.form["room_id"],)
+            (room_id,)
         )
+
+        if paid > 0:
+            connection.execute(
+                """
+                INSERT INTO payments(
+                    booking_id,
+                    amount,
+                    method,
+                    payment_url,
+                    status,
+                    created_at,
+                    created_by
+                )
+                VALUES(?,?,?,?,?,?,?)
+                """,
+                (
+                    booking_id,
+                    paid,
+                    payment_method,
+                    payment_url,
+                    "paid",
+                    datetime.now().isoformat(),
+                    session["uid"]
+                )
+            )
 
         connection.commit()
         connection.close()
@@ -919,9 +1316,12 @@ def bookings():
             r.number AS room,
             r.room_type AS room_type
         FROM bookings b
-        JOIN customers cu ON cu.id=b.customer_id
-        JOIN hotels h ON h.id=b.hotel_id
-        JOIN rooms r ON r.id=b.room_id
+        JOIN customers cu
+            ON cu.id=b.customer_id
+        JOIN hotels h
+            ON h.id=b.hotel_id
+        JOIN rooms r
+            ON r.id=b.room_id
         ORDER BY b.id DESC
         """
     ).fetchall()
@@ -931,6 +1331,7 @@ def bookings():
         SELECT *
         FROM hotels
         WHERE active=1
+        ORDER BY name
         """
     ).fetchall()
 
@@ -938,7 +1339,12 @@ def bookings():
         """
         SELECT *
         FROM rooms
-        WHERE status='available'
+        WHERE status NOT IN(
+            'maintenance',
+            'out_of_service',
+            'cleaning'
+        )
+        ORDER BY hotel_id,number
         """
     ).fetchall()
 
@@ -952,17 +1358,12 @@ def bookings():
     )
 
 
-# =========================
-# إلغاء الحجز
-# =========================
-
 @app.route(
     "/bookings/cancel/<int:bid>",
     methods=["POST"]
 )
 @login_required
 def cancel_booking(bid):
-
     connection = db()
 
     booking = connection.execute(
@@ -975,7 +1376,6 @@ def cancel_booking(bid):
     ).fetchone()
 
     if not booking:
-
         connection.close()
 
         flash(
@@ -988,7 +1388,6 @@ def cancel_booking(bid):
         )
 
     if booking["status"] == "cancelled":
-
         connection.close()
 
         flash(
@@ -1009,32 +1408,15 @@ def cancel_booking(bid):
         (bid,)
     )
 
-    # التأكد هل توجد حجوزات مؤكدة أخرى لنفس الغرفة
-    other_booking = connection.execute(
+    connection.execute(
         """
-        SELECT id
-        FROM bookings
-        WHERE room_id=?
-        AND status='confirmed'
-        AND id!=?
-        LIMIT 1
+        UPDATE rooms
+        SET status='available'
+        WHERE id=?
+        AND status='booked'
         """,
-        (
-            booking["room_id"],
-            bid
-        )
-    ).fetchone()
-
-    if not other_booking:
-
-        connection.execute(
-            """
-            UPDATE rooms
-            SET status='available'
-            WHERE id=?
-            """,
-            (booking["room_id"],)
-        )
+        (booking["room_id"],)
+    )
 
     connection.commit()
     connection.close()
@@ -1049,14 +1431,537 @@ def cancel_booking(bid):
     )
 
 
-# =========================
-# الفاتورة
-# =========================
+@app.route(
+    "/group-bookings",
+    methods=["GET", "POST"]
+)
+@login_required
+def group_bookings():
+    connection = db()
+
+    if request.method == "POST":
+        group_name = request.form.get(
+            "group_name", ""
+        ).strip()
+
+        contact_name = request.form.get(
+            "contact_name", ""
+        ).strip()
+
+        phone = request.form.get(
+            "phone", ""
+        ).strip()
+
+        company_id = (
+            request.form.get(
+                "company_id"
+            )
+            or None
+        )
+
+        hotel_id = request.form.get(
+            "hotel_id"
+        )
+
+        checkin = request.form.get(
+            "checkin", ""
+        )
+
+        checkout = request.form.get(
+            "checkout", ""
+        )
+
+        try:
+            guests = int(
+                request.form.get(
+                    "guests",
+                    "0"
+                ) or 0
+            )
+        except ValueError:
+            guests = 0
+
+        notes = request.form.get(
+            "notes", ""
+        ).strip()
+
+        room_ids = [
+            x
+            for x in request.form.getlist(
+                "room_ids"
+            )
+            if x
+        ]
+
+        try:
+            ci = datetime.fromisoformat(
+                checkin
+            )
+
+            co = datetime.fromisoformat(
+                checkout
+            )
+
+            nights = (
+                co - ci
+            ).days
+
+            if (
+                nights <= 0
+                or not group_name
+                or not room_ids
+            ):
+                raise ValueError
+
+        except ValueError:
+            connection.close()
+
+            flash(
+                "أدخل اسم المجموعة والتواريخ "
+                "واختر غرفة واحدة على الأقل.",
+                "error"
+            )
+
+            return redirect(
+                url_for("group_bookings")
+            )
+
+        valid_rooms = []
+        total = 0
+
+        for rid in room_ids:
+            room = connection.execute(
+                """
+                SELECT *
+                FROM rooms
+                WHERE id=?
+                AND hotel_id=?
+                """,
+                (
+                    rid,
+                    hotel_id
+                )
+            ).fetchone()
+
+            if not room:
+                connection.close()
+
+                flash(
+                    "إحدى الغرف غير موجودة.",
+                    "error"
+                )
+
+                return redirect(
+                    url_for("group_bookings")
+                )
+
+            if room["status"] in {
+                "maintenance",
+                "out_of_service",
+                "cleaning"
+            }:
+                connection.close()
+
+                flash(
+                    "إحدى الغرف غير متاحة.",
+                    "error"
+                )
+
+                return redirect(
+                    url_for("group_bookings")
+                )
+
+            if (
+                room_conflict(
+                    connection,
+                    rid,
+                    checkin,
+                    checkout
+                )
+                or group_room_conflict(
+                    connection,
+                    rid,
+                    checkin,
+                    checkout
+                )
+            ):
+                connection.close()
+
+                flash(
+                    f"الغرفة {room['number']} "
+                    "متعارضة مع حجز آخر.",
+                    "error"
+                )
+
+                return redirect(
+                    url_for("group_bookings")
+                )
+
+            valid_rooms.append(room)
+
+            total += (
+                float(room["price"])
+                * nights
+            )
+
+        paid = max(
+            0,
+            min(
+                float(
+                    request.form.get(
+                        "paid",
+                        "0"
+                    ) or 0
+                ),
+                total
+            )
+        )
+
+        code = (
+            "GR-"
+            + secrets.token_hex(3).upper()
+        )
+
+        cursor = connection.execute(
+            """
+            INSERT INTO group_bookings(
+                code,
+                group_name,
+                contact_name,
+                phone,
+                company_id,
+                hotel_id,
+                checkin,
+                checkout,
+                guests,
+                rooms_count,
+                total,
+                paid,
+                status,
+                notes,
+                created_by,
+                created_at
+            )
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            """,
+            (
+                code,
+                group_name,
+                contact_name,
+                phone,
+                company_id,
+                hotel_id,
+                checkin,
+                checkout,
+                guests,
+                len(valid_rooms),
+                total,
+                paid,
+                "confirmed",
+                notes,
+                session["uid"],
+                datetime.now().isoformat()
+            )
+        )
+
+        group_id = cursor.lastrowid
+
+        for room in valid_rooms:
+            connection.execute(
+                """
+                INSERT INTO group_booking_rooms(
+                    group_booking_id,
+                    room_id,
+                    price
+                )
+                VALUES(?,?,?)
+                """,
+                (
+                    group_id,
+                    room["id"],
+                    float(room["price"]) * nights
+                )
+            )
+
+            connection.execute(
+                """
+                UPDATE rooms
+                SET status='booked'
+                WHERE id=?
+                """,
+                (room["id"],)
+            )
+
+        if paid > 0:
+            connection.execute(
+                """
+                INSERT INTO payments(
+                    group_booking_id,
+                    amount,
+                    method,
+                    payment_url,
+                    status,
+                    created_at,
+                    created_by
+                )
+                VALUES(?,?,?,?,?,?,?)
+                """,
+                (
+                    group_id,
+                    paid,
+                    request.form.get(
+                        "payment_method",
+                        "cash"
+                    ),
+                    request.form.get(
+                        "payment_url",
+                        ""
+                    ),
+                    "paid",
+                    datetime.now().isoformat(),
+                    session["uid"]
+                )
+            )
+
+        connection.commit()
+        connection.close()
+
+        flash(
+            f"تم إنشاء حجز المجموعة {code} "
+            f"لعدد {len(valid_rooms)} غرفة.",
+            "ok"
+        )
+
+        return redirect(
+            url_for("group_bookings")
+        )
+
+    rows = connection.execute(
+        """
+        SELECT
+            gb.*,
+            h.name AS hotel,
+            c.name AS company
+        FROM group_bookings gb
+        JOIN hotels h
+            ON h.id=gb.hotel_id
+        LEFT JOIN companies c
+            ON c.id=gb.company_id
+        ORDER BY gb.id DESC
+        """
+    ).fetchall()
+
+    hotels_list = connection.execute(
+        """
+        SELECT *
+        FROM hotels
+        WHERE active=1
+        ORDER BY name
+        """
+    ).fetchall()
+
+    companies_list = connection.execute(
+        """
+        SELECT *
+        FROM companies
+        WHERE active=1
+        ORDER BY name
+        """
+    ).fetchall()
+
+    rooms_list = connection.execute(
+        """
+        SELECT
+            r.*,
+            h.name AS hotel
+        FROM rooms r
+        JOIN hotels h
+            ON h.id=r.hotel_id
+        WHERE r.status NOT IN(
+            'maintenance',
+            'out_of_service',
+            'cleaning'
+        )
+        ORDER BY h.name,r.number
+        """
+    ).fetchall()
+
+    connection.close()
+
+    return render_template(
+        "group_bookings.html",
+        group_bookings=rows,
+        hotels=hotels_list,
+        companies=companies_list,
+        rooms=rooms_list
+    )
+
+
+@app.route(
+    "/group-bookings/cancel/<int:gid>",
+    methods=["POST"]
+)
+@login_required
+def cancel_group_booking(gid):
+    connection = db()
+
+    group = connection.execute(
+        """
+        SELECT *
+        FROM group_bookings
+        WHERE id=?
+        """,
+        (gid,)
+    ).fetchone()
+
+    if not group:
+        connection.close()
+
+        flash(
+            "حجز المجموعة غير موجود.",
+            "error"
+        )
+
+        return redirect(
+            url_for("group_bookings")
+        )
+
+    connection.execute(
+        """
+        UPDATE group_bookings
+        SET status='cancelled'
+        WHERE id=?
+        """,
+        (gid,)
+    )
+
+    rooms = connection.execute(
+        """
+        SELECT room_id
+        FROM group_booking_rooms
+        WHERE group_booking_id=?
+        """,
+        (gid,)
+    ).fetchall()
+
+    for row in rooms:
+        rid = row["room_id"]
+
+        still_used = connection.execute(
+            """
+            SELECT 1
+            FROM bookings
+            WHERE room_id=?
+            AND status='confirmed'
+            AND checkin < ?
+            AND checkout > ?
+            LIMIT 1
+            """,
+            (
+                rid,
+                group["checkout"],
+                group["checkin"]
+            )
+        ).fetchone()
+
+        if not still_used:
+            connection.execute(
+                """
+                UPDATE rooms
+                SET status='available'
+                WHERE id=?
+                AND status='booked'
+                """,
+                (rid,)
+            )
+
+    connection.commit()
+    connection.close()
+
+    flash(
+        "تم إلغاء حجز المجموعة.",
+        "ok"
+    )
+
+    return redirect(
+        url_for("group_bookings")
+    )
+
+
+@app.route(
+    "/companies",
+    methods=["GET", "POST"]
+)
+@login_required
+def companies():
+    connection = db()
+
+    if request.method == "POST":
+        connection.execute(
+            """
+            INSERT INTO companies(
+                name,
+                contact_name,
+                phone,
+                email,
+                tax_number,
+                notes,
+                created_at
+            )
+            VALUES(?,?,?,?,?,?,?)
+            """,
+            (
+                request.form["name"].strip(),
+                request.form.get(
+                    "contact_name",
+                    ""
+                ).strip(),
+                request.form.get(
+                    "phone",
+                    ""
+                ).strip(),
+                request.form.get(
+                    "email",
+                    ""
+                ).strip(),
+                request.form.get(
+                    "tax_number",
+                    ""
+                ).strip(),
+                request.form.get(
+                    "notes",
+                    ""
+                ).strip(),
+                datetime.now().isoformat()
+            )
+        )
+
+        connection.commit()
+
+        flash(
+            "تمت إضافة الشركة.",
+            "ok"
+        )
+
+    rows = connection.execute(
+        """
+        SELECT *
+        FROM companies
+        ORDER BY id DESC
+        """
+    ).fetchall()
+
+    connection.close()
+
+    return render_template(
+        "companies.html",
+        companies=rows
+    )
+
 
 @app.route("/invoices/<int:bid>")
 @login_required
 def invoice(bid):
-
     connection = db()
 
     booking = connection.execute(
@@ -1082,14 +1987,15 @@ def invoice(bid):
         (bid,)
     ).fetchone()
 
+    settings = get_settings(connection)
+
     connection.close()
 
     if not booking:
         return "الحجز غير موجود", 404
 
-    settings = get_settings()
-
-    remaining = (
+    remaining = max(
+        0,
         float(booking["price"])
         - float(booking["paid"])
     )
@@ -1102,93 +2008,19 @@ def invoice(bid):
     )
 
 
-# =========================
-# الإعدادات
-# =========================
-
-@app.route("/settings", methods=["GET", "POST"])
-@login_required
-@admin_required
-def settings():
-
-    settings_data = get_settings()
-
-    if request.method == "POST":
-
-        save_setting(
-            "company_name",
-            request.form.get(
-                "company_name",
-                ""
-            ).strip()
-        )
-
-        save_setting(
-            "company_phone",
-            request.form.get(
-                "company_phone",
-                ""
-            ).strip()
-        )
-
-        save_setting(
-            "company_email",
-            request.form.get(
-                "company_email",
-                ""
-            ).strip()
-        )
-
-        save_setting(
-            "company_address",
-            request.form.get(
-                "company_address",
-                ""
-            ).strip()
-        )
-
-        save_setting(
-            "currency",
-            request.form.get(
-                "currency",
-                "ريال سعودي"
-            ).strip()
-        )
-
-        flash(
-            "تم حفظ إعدادات النظام بنجاح.",
-            "ok"
-        )
-
-        return redirect(
-            url_for("settings")
-        )
-
-    return render_template(
-        "settings.html",
-        settings=settings_data
-    )
-
-
-# =========================
-# المواسم
-# =========================
-
-@app.route("/seasons", methods=["GET", "POST"])
+@app.route(
+    "/seasons",
+    methods=["GET", "POST"]
+)
 @login_required
 def seasons():
-
     connection = db()
 
     if request.method == "POST":
-
         connection.execute(
             """
             INSERT INTO seasons(
-                name,
-                start_date,
-                end_date,
-                notes
+                name,start_date,end_date,notes
             )
             VALUES(?,?,?,?)
             """,
@@ -1196,7 +2028,10 @@ def seasons():
                 request.form["name"],
                 request.form["start_date"],
                 request.form["end_date"],
-                request.form["notes"]
+                request.form.get(
+                    "notes",
+                    ""
+                )
             )
         )
 
@@ -1223,26 +2058,16 @@ def seasons():
     )
 
 
-# =========================
-# التقارير
-# =========================
-
 @app.route("/reports")
 @login_required
 def reports():
-
     connection = db()
 
     rows = connection.execute(
         """
         SELECT
             h.name AS hotel,
-            COUNT(
-                CASE
-                    WHEN b.status='confirmed'
-                    THEN b.id
-                END
-            ) AS bookings,
+            COUNT(b.id) AS bookings,
             COALESCE(
                 SUM(
                     CASE
@@ -1267,6 +2092,7 @@ def reports():
         LEFT JOIN bookings b
             ON b.hotel_id=h.id
         GROUP BY h.id
+        ORDER BY h.name
         """
     ).fetchall()
 
@@ -1278,9 +2104,142 @@ def reports():
     )
 
 
-# =========================
-# تشغيل قاعدة البيانات
-# =========================
+@app.route(
+    "/settings",
+    methods=["GET", "POST"]
+)
+@login_required
+@admin_required
+def settings():
+    connection = db()
+
+    if request.method == "POST":
+        for key in DEFAULT_SETTINGS:
+            save_setting(
+                connection,
+                key,
+                request.form.get(
+                    key,
+                    ""
+                ).strip()
+            )
+
+        connection.commit()
+
+        flash(
+            "تم حفظ إعدادات النظام بنجاح.",
+            "ok"
+        )
+
+        connection.close()
+
+        return redirect(
+            url_for("settings")
+        )
+
+    settings_data = get_settings(
+        connection
+    )
+
+    connection.close()
+
+    return render_template(
+        "settings.html",
+        settings=settings_data
+    )
+
+
+@app.route(
+    "/payments/link/<int:bid>",
+    methods=["POST"]
+)
+@login_required
+def create_payment_link(bid):
+    connection = db()
+
+    booking = connection.execute(
+        """
+        SELECT *
+        FROM bookings
+        WHERE id=?
+        """,
+        (bid,)
+    ).fetchone()
+
+    if not booking:
+        connection.close()
+
+        flash(
+            "الحجز غير موجود.",
+            "error"
+        )
+
+        return redirect(
+            url_for("bookings")
+        )
+
+    settings = get_settings(
+        connection
+    )
+
+    base_url = settings.get(
+        "payment_url",
+        ""
+    ).strip()
+
+    if not base_url:
+        connection.close()
+
+        flash(
+            "أضف رابط بوابة الدفع في إعدادات النظام أولاً.",
+            "error"
+        )
+
+        return redirect(
+            url_for("bookings")
+        )
+
+    # هذا تجهيز للرابط فقط.
+    # الربط الحقيقي يحتاج API ومفاتيح بوابة دفع.
+    separator = (
+        "&"
+        if "?" in base_url
+        else "?"
+    )
+
+    payment_url = (
+        f"{base_url}"
+        f"{separator}"
+        f"booking={booking['code']}"
+        f"&amount="
+        f"{max(0, float(booking['price']) - float(booking['paid'])):.2f}"
+    )
+
+    connection.execute(
+        """
+        UPDATE bookings
+        SET payment_url=?
+        WHERE id=?
+        """,
+        (
+            payment_url,
+            bid
+        )
+    )
+
+    connection.commit()
+    connection.close()
+
+    flash(
+        "تم تجهيز رابط الدفع. "
+        "الربط الإلكتروني الفعلي يحتاج بيانات بوابة الدفع.",
+        "ok"
+    )
+
+    return redirect(
+        url_for("bookings")
+    )
+
 
 init_db()
 
