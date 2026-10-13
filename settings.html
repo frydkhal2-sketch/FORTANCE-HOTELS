@@ -1,2 +1,91 @@
-{% extends "base.html" %}{% block content %}<div class="pagehead"><div><h1>⚙️ إعدادات النظام</h1><p class="muted">بيانات الشركة والفواتير ورابط الدفع الأساسي</p></div></div><form method="post" class="panel"><div class="formgrid">{% for key,label in [('company_name','اسم الشركة'),('company_phone','رقم الهاتف'),('company_email','البريد الإلكتروني'),('company_address','العنوان'),('currency','العملة'),('payment_provider','مزود الدفع') ] %}<div class="field"><label>{{ label }}</label><input name="{{ key }}" value="{{ settings.get(key,'') }}"></div>{% endfor %}<div class="field" style="grid-column:1/-1"><label>رابط الدفع الأساسي</label><input name="payment_url" type="url" placeholder="https://..." value="{{ settings.get('payment_url','') }}"><small class="muted">تنبيه: هذا يحفظ رابطًا توفره جهة الدفع؛ لا ينشئ بوابة دفع أو عملية تحصيل تلقائيًا.</small></div></div><p><button class="gold" type="submit">💾 حفظ الإعدادات</button></p></form>{% endblock %}
-{% extends "base.html" %}{% block content %}<div class="pagehead"><div><h1>🛏️ إدارة الغرف</h1><p class="muted">إضافة غرفة أو مجموعة غرف ومتابعة حالتها</p></div></div><div class="grid">{% for key,label in [('vacant','شاغرة'),('occupied','مشغولة'),('checkout_today','خروج اليوم'),('upcoming','حجوزات قادمة'),('maintenance','صيانة'),('cleaning','تنظيف'),('out_of_service','خارج الخدمة')] %}<div class="stat"><small>{{ label }}</small><h2>{{ counts.get(key,0) }}</h2></div>{% endfor %}</div><div class="panel"><h3>إضافة عدة غرف دفعة واحدة</h3><form method="post"><input type="hidden" name="action" value="bulk"><div class="formgrid"><div class="field"><label>الفندق</label><select name="hotel_id" required>{% for h in hotels %}<option value="{{ h.id }}">{{ h.name }}</option>{% endfor %}</select></div><div class="field"><label>من رقم غرفة</label><input type="number" name="start_number" min="1" required></div><div class="field"><label>إلى رقم غرفة</label><input type="number" name="end_number" min="1" required></div><div class="field"><label>نوع الغرفة</label><select name="room_type"><option>مفردة</option><option>مزدوجة</option><option>ثلاثية</option><option>رباعية</option><option>جناح</option></select></div><div class="field"><label>السعر لليلة (ر.س)</label><input type="number" name="price" min="0" step=".01" value="0"></div><div class="field"><label>الحالة</label><select name="status"><option value="available">متاحة</option><option value="maintenance">صيانة</option><option value="cleaning">تنظيف</option><option value="out_of_service">خارج الخدمة</option></select></div></div><p><button class="gold">＋ إضافة الغرف المحددة</button></p></form></div><section class="panel"><h3>الغرف وحالاتها</h3><div class="tablewrap"><table><thead><tr><th>الفندق</th><th>الغرفة</th><th>النوع</th><th>السعر</th><th>الحالة الحالية</th><th>تحديث الحالة</th></tr></thead><tbody>{% for r in rooms %}<tr><td>{{ r.hotel }}</td><td>{{ r.number }}</td><td>{{ r.room_type }}</td><td>{{ '%.2f'|format(r.price or 0) }} ر.س</td><td><span class="tag">{{ {'vacant':'شاغرة','occupied':'مشغولة','checkout_today':'خروج اليوم','upcoming':'حجز قادم','available':'متاحة','maintenance':'صيانة','cleaning':'تنظيف','out_of_service':'خارج الخدمة'}.get(r.room_status,r.room_status) }}</span></td><td><form method="post" action="/rooms/status/{{ r.id }}"><select name="status"><option value="available">متاحة</option><option value="maintenance">صيانة</option><option value="cleaning">تنظيف</option><option value="out_of_service">خارج الخدمة</option></select> <button>حفظ</button></form></td></tr>{% else %}<tr><td colspan="6">لا توجد غرف. استخدم النموذج أعلاه لإضافتها.</td></tr>{% endfor %}</tbody></table></div></section>{% endblock %}
+```html
+{% extends "base.html" %}
+
+{% block content %}
+<div class="pagehead">
+    <div>
+        <h1>⚙️ إعدادات النظام</h1>
+        <p class="muted">بيانات شركة FORTANCE HOTELS والفواتير والدفع</p>
+    </div>
+</div>
+
+<form method="post" action="/settings" class="panel">
+    <div class="formgrid">
+
+        <div class="field">
+            <label>اسم الشركة</label>
+            <input type="text" name="company_name"
+                   value="{{ settings.get('company_name', 'FORTANCE HOTELS') }}"
+                   required>
+        </div>
+
+        <div class="field">
+            <label>رقم الهاتف</label>
+            <input type="text" name="company_phone"
+                   value="{{ settings.get('company_phone', '') }}">
+        </div>
+
+        <div class="field">
+            <label>البريد الإلكتروني</label>
+            <input type="email" name="company_email"
+                   value="{{ settings.get('company_email', '') }}">
+        </div>
+
+        <div class="field">
+            <label>العملة</label>
+            <select name="currency">
+                <option value="ريال سعودي"
+                    {% if settings.get('currency') == 'ريال سعودي' %}selected{% endif %}>
+                    ريال سعودي
+                </option>
+                <option value="دولار أمريكي"
+                    {% if settings.get('currency') == 'دولار أمريكي' %}selected{% endif %}>
+                    دولار أمريكي
+                </option>
+            </select>
+        </div>
+
+        <div class="field" style="grid-column:1/-1">
+            <label>عنوان الشركة</label>
+            <input type="text" name="company_address"
+                   value="{{ settings.get('company_address', '') }}">
+        </div>
+
+        <div class="field">
+            <label>مزود الدفع</label>
+            <select name="payment_provider">
+                <option value="">اختر مزود الدفع</option>
+                <option value="paytabs"
+                    {% if settings.get('payment_provider') == 'paytabs' %}selected{% endif %}>
+                    PayTabs
+                </option>
+                <option value=" Moyasar"
+                    {% if settings.get('payment_provider') == ' Moyasar' %}selected{% endif %}>
+                    Moyasar
+                </option>
+                <option value="other"
+                    {% if settings.get('payment_provider') == 'other' %}selected{% endif %}>
+                    مزود آخر
+                </option>
+            </select>
+        </div>
+
+        <div class="field" style="grid-column:1/-1">
+            <label>رابط الدفع الإلكتروني</label>
+            <input type="url" name="payment_url"
+                   placeholder="https://..."
+                   value="{{ settings.get('payment_url', '') }}">
+            <small class="muted">
+                ضع رابط الدفع الذي حصلت عليه من مزود الخدمة.
+                حفظ الرابط وحده لا ينفذ عملية تحصيل.
+            </small>
+        </div>
+
+    </div>
+
+    <p>
+        <button type="submit" class="gold">💾 حفظ الإعدادات</button>
+    </p>
+</form>
+{% endblock %}
+```
