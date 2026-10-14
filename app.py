@@ -1432,14 +1432,11 @@ def cancel_booking(bid):
         url_for("bookings")
     )
 
-
-@app.route(
-    "/group-bookings",
-    methods=["GET", "POST"]
-)
+@app.route("/group-bookings", methods=["GET", "POST"])
 @login_required
 def group_bookings():
     connection = db()
+
 
     if request.method == "POST":
         group_name = request.form.get(
