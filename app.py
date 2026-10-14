@@ -297,7 +297,7 @@ def init_db():
     ).fetchone()["n"] == 0:
         connection.execute(
             "INSERT INTO hotels(name,city,phone) VALUES(?,?,?)",
-            ("فندق ريان الجوار", "مكة المكرمة", "")
+            ("فندق مورو العالمية", "مكة المكرمة", "")
         )
 
     cleanup = connection.execute(
