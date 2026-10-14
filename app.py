@@ -2153,7 +2153,6 @@ def settings():
     methods=["POST"]
 )
 @login_required
-```python
 def moyasar_get_invoice(invoice_id):
     secret = os.environ.get("MOYASAR_SECRET_KEY", "").strip()
 
