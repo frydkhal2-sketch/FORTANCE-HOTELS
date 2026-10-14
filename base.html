@@ -1,568 +1,15 @@
+
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#071426">
 
     <title>{% block title %}FORTANCE HOTELS{% endblock %}</title>
 
-  <link rel="stylesheet"
+    <link rel="stylesheet"
           href="{{ url_for('static', filename='style.css') }}">
-
-       :root {
-    --navy: #071426;
-    --navy2: #102844;
-    --gold: #d9a83f;
-    --gold-light: #f4dfaa;
-    --bg: #f4f6fa;
-    --white: #ffffff;
-    --text: #172033;
-    --muted: #778397;
-    --border: #e5eaf1;
-    --success: #168257;
-    --danger: #b42318;}
-
-        * {
-            box-sizing: border-box;
-        }
-
-        html {
-            min-height: 100%;
-            scroll-behavior: smooth;
-        }
-
-        body {
-            margin: 0;
-            min-height: 100vh;
-            background: var(--bg);
-            color: var(--text);
-            font-family: Tahoma, Arial, sans-serif;
-            font-size: 14px;
-            line-height: 1.7;
-        }
-
-        a {
-            color: inherit;
-            text-decoration: none;
-        }
-
-        button,
-        input,
-        select,
-        textarea {
-            font: inherit;
-        }
-
-        .layout {
-            min-height: 100vh;
-        }
-
-        /* القائمة الجانبية */
-
-        .side {
-            position: fixed;
-            inset: 0 0 0 auto;
-            z-index: 100;
-            display: flex;
-            flex-direction: column;
-            width: 260px;
-            padding: 20px 15px;
-            overflow-y: auto;
-            color: #fff;
-            background: linear-gradient(
-                165deg,
-                var(--navy) 0%,
-                var(--navy2) 100%
-            );
-            box-shadow: -5px 0 25px #07142612;
-        }
-
-        .brand {
-            padding: 10px 8px 22px;
-            text-align: center;
-            border-bottom: 1px solid #ffffff1c;
-        }
-
-        .brand img {
-            display: block;
-            width: 155px;
-            max-width: 100%;
-            height: 85px;
-            object-fit: contain;
-            margin: 0 auto 9px;
-        }
-
-        .brand-name {
-            color: var(--gold-light);
-            font-size: 18px;
-            font-weight: 900;
-            letter-spacing: 1px;
-        }
-
-        .brand-subtitle {
-            margin-top: 5px;
-            color: #bdc9d9;
-            font-size: 11px;
-        }
-
-        /* المستخدم الحالي */
-
-        .userbox {
-            margin: 18px 0;
-            padding: 14px;
-            border: 1px solid #ffffff1c;
-            border-radius: 13px;
-            background: #ffffff0b;
-            overflow-wrap: anywhere;
-        }
-
-        .userbox .welcome {
-            color: #b9c6d8;
-            font-size: 12px;
-        }
-
-        .userbox .username {
-            display: inline-block;
-            margin-top: 4px;
-            color: var(--gold-light);
-            font-size: 15px;
-        }
-
-        .user-role {
-            display: inline-block;
-            margin-top: 8px;
-            padding: 3px 10px;
-            border: 1px solid #ffffff1c;
-            border-radius: 30px;
-            background: #ffffff0e;
-            color: #e4ebf5;
-            font-size: 11px;
-        }
-
-        .menu-title {
-            margin: 9px 10px;
-            color: #95a9c1;
-            font-size: 11px;
-        }
-
-        .menu {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        .menu a {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            min-height: 43px;
-            padding: 10px 12px;
-            border: 1px solid transparent;
-            border-radius: 10px;
-            color: #dce5f2;
-            font-size: 13px;
-            font-weight: 700;
-            transition: background .18s ease, color .18s ease;
-        }
-
-        .menu a:hover {
-            background: #ffffff10;
-            color: var(--gold-light);
-        }
-
-        .menu a.active {
-            border-color: #d9a83f24;
-            border-right: 3px solid var(--gold);
-            background: #d9a83f17;
-            color: var(--gold-light);
-        }
-
-        .menu .logout {
-            margin-top: 12px;
-            border-top: 1px solid #ffffff18;
-            border-radius: 0 0 10px 10px;
-            color: #ffcece;
-        }
-
-        .menu .logout:hover {
-            background: #b4231825;
-            color: #fff;
-        }
-
-        /* المحتوى الرئيسي */
-
-        .main {
-            min-height: 100vh;
-            margin-right: 260px;
-            padding: 26px 30px 35px;
-        }
-
-        .topbar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 14px;
-            margin-bottom: 24px;
-            padding-bottom: 18px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .topbar-title {
-            margin: 0;
-            color: var(--navy);
-            font-size: 21px;
-            font-weight: 800;
-        }
-
-        .topbar-subtitle {
-            margin-top: 5px;
-            color: var(--muted);
-            font-size: 12px;
-        }
-
-        .company-label {
-            padding: 9px 13px;
-            border: 1px solid #d9a83f50;
-            border-radius: 9px;
-            background: #d9a83f12;
-            color: #8a6821;
-            font-size: 12px;
-            font-weight: 900;
-            letter-spacing: .5px;
-        }
-
-        /* رسائل النظام */
-
-        .flash {
-            margin-bottom: 14px;
-            padding: 12px 15px;
-            border: 1px solid #b7e4c7;
-            border-radius: 10px;
-            background: #e9f8ef;
-            color: #17653a;
-            line-height: 1.8;
-        }
-
-        .flash.error,
-        .flash.danger {
-            border-color: #f2b8b5;
-            background: #fde8e7;
-            color: #a61b1b;
-        }
-
-        .flash.warning {
-            border-color: #f0d28b;
-            background: #fff6dc;
-            color: #815b00;
-        }
-
-        .flash.info,
-        .flash.message {
-            border-color: #b8d8f5;
-            background: #eaf4ff;
-            color: #174b7a;
-        }
-
-        /* عناوين الصفحات */
-
-        .pagehead {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 12px;
-            margin-bottom: 20px;
-        }
-
-        .pagehead h1 {
-            margin: 0 0 6px;
-            color: var(--navy);
-            font-size: 23px;
-            font-weight: 800;
-        }
-
-        .muted {
-            color: var(--muted);
-        }
-
-        /* البطاقات */
-
-        .panel,
-        .stat {
-            margin: 16px 0;
-            padding: 20px;
-            border: 1px solid var(--border);
-            border-radius: 15px;
-            background: var(--white);
-            box-shadow: 0 5px 20px #10284408;
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(
-                auto-fit,
-                minmax(min(100%, 180px), 1fr)
-            );
-            gap: 15px;
-        }
-
-        .formgrid {
-            display: grid;
-            grid-template-columns: repeat(
-                auto-fit,
-                minmax(min(100%, 200px), 1fr)
-            );
-            gap: 15px;
-        }
-
-        /* النماذج */
-
-        .field label {
-            display: block;
-            margin-bottom: 7px;
-            color: #53627a;
-            font-weight: 700;
-        }
-
-        .field input,
-        .field select,
-        .field textarea {
-            display: block;
-            width: 100%;
-            min-height: 43px;
-            padding: 10px 12px;
-            border: 1px solid #dbe2ec;
-            border-radius: 9px;
-            background: #fff;
-            color: var(--text);
-        }
-
-        .field textarea {
-            min-height: 100px;
-            resize: vertical;
-        }
-
-        .field input:focus,
-        .field select:focus,
-        .field textarea:focus {
-            outline: 2px solid #d9a83f45;
-            border-color: var(--gold);
-        }
-
-        /* الأزرار */
-
-        .btn,
-        button {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 7px;
-            min-height: 40px;
-            padding: 9px 15px;
-            border: 1px solid transparent;
-            border-radius: 9px;
-            background: var(--navy2);
-            color: #fff;
-            font-weight: 700;
-            text-align: center;
-            cursor: pointer;
-            transition: opacity .18s ease;
-        }
-
-        .btn:hover,
-        button:hover {
-            opacity: .88;
-        }
-
-        .btn.gold,
-        button.gold {
-            background: var(--gold);
-            color: #171717;
-        }
-
-        .btn.red,
-        button.red {
-            background: var(--danger);
-            color: #fff;
-        }
-
-        .btn:disabled,
-        button:disabled {
-            opacity: .5;
-            cursor: not-allowed;
-        }
-
-        /* الجداول */
-
-        .tablewrap {
-            width: 100%;
-            overflow-x: auto;
-            border: 1px solid var(--border);
-            border-radius: 11px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: #fff;
-        }
-
-        th,
-        td {
-            padding: 12px;
-            border-bottom: 1px solid #edf0f5;
-            text-align: right;
-            vertical-align: middle;
-        }
-
-        th {
-            background: #f4f7fb;
-            color: #4c5b70;
-            font-size: 12px;
-            font-weight: 800;
-            white-space: nowrap;
-        }
-
-        td {
-            color: #344158;
-        }
-
-        tbody tr:last-child td {
-            border-bottom: 0;
-        }
-
-        tbody tr:hover {
-            background: #fafbfd;
-        }
-
-        .tag {
-            display: inline-block;
-            padding: 4px 9px;
-            border-radius: 20px;
-            background: #edf5ff;
-            color: #244b75;
-            font-size: 12px;
-        }
-
-        /* مساحة المحتوى للقوالب */
-
-        .content-area {
-            min-width: 0;
-        }
-
-        /* الأجهزة المتوسطة */
-
-        @media (max-width: 1000px) {
-            .side {
-                width: 225px;
-            }
-
-            .main {
-                margin-right: 225px;
-                padding: 22px 18px;
-            }
-        }
-
-        /* الجوال */
-
-        @media (max-width: 760px) {
-            .side {
-                position: relative;
-                inset: auto;
-                width: 100%;
-                max-height: none;
-                padding: 12px;
-            }
-
-            .brand {
-                padding: 5px 8px 14px;
-            }
-
-            .brand img {
-                height: 60px;
-                width: 130px;
-            }
-
-            .brand-name {
-                font-size: 16px;
-            }
-
-            .userbox {
-                margin: 12px 0;
-                padding: 11px;
-            }
-
-            .menu-title {
-                margin-top: 12px;
-            }
-
-            .menu {
-                display: grid;
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-                gap: 6px;
-            }
-
-            .menu a {
-                min-width: 0;
-                min-height: 42px;
-                padding: 9px;
-                font-size: 12px;
-            }
-
-            .menu .logout {
-                margin-top: 0;
-                border-top: 0;
-                border-radius: 10px;
-            }
-
-            .main {
-                min-height: auto;
-                margin-right: 0;
-                padding: 16px 12px 25px;
-            }
-
-            .topbar {
-                margin-bottom: 18px;
-                padding-bottom: 14px;
-            }
-
-            .topbar-title {
-                font-size: 18px;
-            }
-
-            .company-label {
-                font-size: 11px;
-            }
-
-            .pagehead h1 {
-                font-size: 21px;
-            }
-
-            .panel,
-            .stat {
-                padding: 14px;
-                border-radius: 12px;
-            }
-        }
-
-        @media (max-width: 380px) {
-            .menu a {
-                gap: 5px;
-                padding: 8px 6px;
-                font-size: 11px;
-            }
-
-            .main {
-                padding-right: 9px;
-                padding-left: 9px;
-            }
-
-            .topbar-title {
-                font-size: 16px;
-            }
-        }
-    </style>
 
     {% block extra_head %}{% endblock %}
 </head>
@@ -571,7 +18,6 @@
 <div class="layout">
 
     <aside class="side">
-
         <div class="brand">
             <img
                 src="{{ url_for('static', filename='logo.jpg') }}"
@@ -580,7 +26,7 @@
             >
 
             <div class="brand-name">FORTANCE HOTELS</div>
-            <div class="brand-subtitle">إدارة الض��افة الفندقية</div>
+            <div class="brand-subtitle">إدارة الضيافة الفندقية</div>
         </div>
 
         <div class="userbox">
@@ -590,8 +36,6 @@
                 {{ user_name or 'المستخدم' }}
             </strong>
 
-            <br>
-
             <span class="user-role">
                 {{ ROLES.get(user_role, user_role or 'مستخدم') }}
             </span>
@@ -600,70 +44,77 @@
         <div class="menu-title">القائمة الرئيسية</div>
 
         <nav class="menu">
-
             <a href="/dashboard"
                class="{% if request.path == '/dashboard' %}active{% endif %}">
-                <span>🏠</span><span>الرئيسية</span>
+                <span class="menu-icon">🏠</span>
+                <span>الرئيسية</span>
             </a>
 
             <a href="/hotels"
                class="{% if request.path.startswith('/hotels') %}active{% endif %}">
-                <span>🏨</span><span>الفنادق</span>
+                <span class="menu-icon">🏨</span>
+                <span>الفنادق</span>
             </a>
 
             <a href="/rooms"
                class="{% if request.path.startswith('/rooms') %}active{% endif %}">
-                <span>🛏️</span><span>الغرف</span>
+                <span class="menu-icon">🛏️</span>
+                <span>الغرف</span>
             </a>
 
             <a href="/bookings"
                class="{% if request.path.startswith('/bookings') %}active{% endif %}">
-                <span>📅</span><span>الحجوزات</span>
+                <span class="menu-icon">📅</span>
+                <span>الحجوزات</span>
             </a>
 
             <a href="/group-bookings"
                class="{% if request.path.startswith('/group-bookings') %}active{% endif %}">
-                <span>👥</span><span>حجوزات المجموعات</span>
+                <span class="menu-icon">👥</span>
+                <span>حجوزات المجموعات</span>
             </a>
 
             <a href="/companies"
                class="{% if request.path.startswith('/companies') %}active{% endif %}">
-                <span>🏢</span><span>الشركات</span>
+                <span class="menu-icon">🏢</span>
+                <span>الشركات</span>
             </a>
 
             {% if user_role == 'admin' %}
             <a href="/employees"
                class="{% if request.path.startswith('/employees') %}active{% endif %}">
-                <span>👤</span><span>الموظفون</span>
+                <span class="menu-icon">👤</span>
+                <span>الموظفون</span>
             </a>
 
             <a href="/settings"
                class="{% if request.path.startswith('/settings') %}active{% endif %}">
-                <span>⚙️</span><span>إعدادات النظام</span>
+                <span class="menu-icon">⚙️</span>
+                <span>إعدادات النظام</span>
             </a>
             {% endif %}
 
             <a href="/seasons"
                class="{% if request.path.startswith('/seasons') %}active{% endif %}">
-                <span>🗓️</span><span>الإجازات والمواسم</span>
+                <span class="menu-icon">🗓️</span>
+                <span>الإجازات والمواسم</span>
             </a>
 
             <a href="/reports"
                class="{% if request.path.startswith('/reports') %}active{% endif %}">
-                <span>📊</span><span>التقارير</span>
+                <span class="menu-icon">📊</span>
+                <span>التقارير</span>
             </a>
 
             <a href="/logout" class="logout">
-                <span>🚪</span><span>تسجيل الخروج</span>
+                <span class="menu-icon">🚪</span>
+                <span>تسجيل الخروج</span>
             </a>
-
         </nav>
-
     </aside>
 
     <main class="main">
-
-        <div class="topbar">
+        <header class="topbar">
             <div>
                 <h2 class="topbar-title">
                     {% block page_title %}نظام إدارة الفنادق{% endblock %}
@@ -675,20 +126,21 @@
             </div>
 
             <div class="company-label">FORTANCE HOTELS</div>
-        </div>
+        </header>
 
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% for cat, msg in messages %}
-                <div class="flash {{ cat }}" role="status">
-                    {{ msg }}
-                </div>
-            {% endfor %}
-        {% endwith %}
+        <section class="flash-area" aria-live="polite">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% for cat, msg in messages %}
+                    <div class="flash {{ cat }}" role="status">
+                        {{ msg }}
+                    </div>
+                {% endfor %}
+            {% endwith %}
+        </section>
 
         <div class="content-area">
             {% block content %}{% endblock %}
         </div>
-
     </main>
 
 </div>
