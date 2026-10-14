@@ -1,4 +1,3 @@
-```html
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
@@ -7,21 +6,23 @@
 
     <title>{% block title %}FORTANCE HOTELS{% endblock %}</title>
 
-    <link rel="stylesheet"
-          href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
-       :root {
-    --navy: #071426;
-    --navy2: #102844;
-    --gold: #d9a83f;
-    --gold-light: #f4dfaa;
-    --bg: #f4f6fa;
-    --white: #ffffff;
-    --text: #172033;
-    --muted: #778397;
-    --border: #e5eaf1;
-    --success: #168257;
-    --danger: #b42318;}
+    <style>
+        :root {
+            --navy: #071426;
+            --navy2: #102844;
+            --gold: #d9a83f;
+            --gold-light: #f4dfaa;
+            --bg: #f4f6fa;
+            --white: #ffffff;
+            --text: #172033;
+            --muted: #778397;
+            --border: #e5eaf1;
+            --success: #168257;
+            --danger: #b42318;
+        }
+
         * {
             box-sizing: border-box;
         }
@@ -580,7 +581,7 @@
             >
 
             <div class="brand-name">FORTANCE HOTELS</div>
-            <div class="brand-subtitle">إدارة الضيافة الفندقية</div>
+            <div class="brand-subtitle">إدارة الض��افة الفندقية</div>
         </div>
 
         <div class="userbox">
@@ -696,4 +697,3 @@
 {% block extra_scripts %}{% endblock %}
 </body>
 </html>
-```
