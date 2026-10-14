@@ -1,10 +1,10 @@
-
 from flask import jsonify
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 import sqlite3
 import os
 import hashlib
 import secrets
+import requests
 from functools import wraps
 from datetime import datetime, date
 
@@ -244,6 +244,14 @@ def init_db():
     ensure_column(
         connection, "bookings", "group_booking_id",
         "INTEGER"
+    )
+    ensure_column(
+        connection, "bookings", "moyasar_invoice_id",
+        "TEXT DEFAULT ''"
+    )
+    ensure_column(
+        connection, "bookings", "payment_status",
+        "TEXT DEFAULT 'pending'"
     )
 
     for key, value in DEFAULT_SETTINGS.items():
@@ -2148,11 +2156,6 @@ def settings():
     )
 
 
-@app.route(
-    "/payments/link/<int:bid>",
-    methods=["POST"]
-)
-@login_required
 def moyasar_get_invoice(invoice_id):
     secret = os.environ.get("MOYASAR_SECRET_KEY", "").strip()
 
@@ -2211,7 +2214,6 @@ def create_payment_link(bid):
             flash("أضف MOYASAR_SECRET_KEY في Render أولاً.", "error")
             return redirect(url_for("bookings"))
 
-        # لا تنشئ فاتورة جديدة إذا كان هناك رابط سابق صالح.
         old_id = booking["moyasar_invoice_id"] or ""
 
         if old_id:
@@ -2286,7 +2288,7 @@ def create_payment_link(bid):
                 payment_url,
                 invoice_id,
                 datetime.now().isoformat(timespec="seconds"),
-                session.get("user_id"),
+                session.get("uid"),
             ),
         )
 
@@ -2301,7 +2303,7 @@ def create_payment_link(bid):
     except (RuntimeError, ValueError):
         connection.rollback()
         app.logger.exception("Payment setup error")
-        flash("تعذر إعداد الدفع. راجع إعدادات النظام.", "error")
+        flash("تعذر إعد��د الدفع. راجع إعدادات النظام.", "error")
 
     finally:
         connection.close()
@@ -2311,7 +2313,6 @@ def create_payment_link(bid):
 
 @app.route("/payments/moyasar/callback", methods=["POST"])
 def moyasar_callback():
-    # لا نثق ببيانات الإشعار وحدها؛ نسترجع الفاتورة من Moyasar.
     data = request.get_json(silent=True) or {}
     invoice_id = data.get("id")
 
@@ -2356,7 +2357,6 @@ def moyasar_callback():
         status = invoice_data.get("status")
 
         if status == "paid":
-            # اجعل التحديث آمناً عند تكرار الإشعار.
             payment = connection.execute(
                 """
                 SELECT * FROM payments
@@ -2469,4 +2469,9 @@ def moyasar_return():
         connection.close()
 
     return redirect(url_for("bookings"))
-```
+
+
+# Run the app when executed directly
+if __name__ == "__main__":
+    init_db()
+    app.run(debug=True, host="0.0.0.0", port=5000)
