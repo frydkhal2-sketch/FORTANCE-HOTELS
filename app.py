@@ -1496,6 +1496,23 @@ except (ValueError, TypeError):
                 "room_ids"
             )
             if x
+            room_ids = [
+    x
+    for x in request.form.getlist("room_ids")
+    if x
+]
+
+requested_rooms = int(
+    request.form.get("requested_rooms", "0") or 0
+)
+
+if requested_rooms < 1 or requested_rooms != len(room_ids):
+    connection.close()
+    flash(
+        "عدد الغرف المطلوبة يجب أن يساوي عدد الغرف التي اخترتها.",
+        "error"
+    )
+    return redirect(url_for("group_bookings"))
         ]
 
         try:
