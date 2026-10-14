@@ -1475,13 +1475,13 @@ def group_bookings():
         checkout = request.form.get(
             "checkout", ""
         )
-
-        try:
-            guests = int(
-                request.form.get(
-                    "guests",
-                    "0"
-                ) or 0
+try:
+    requested_rooms = int(
+        request.form.get("rooms_count", "0") or 0
+    )
+except (ValueError, TypeError):
+    requested_rooms = 0
+       
             )
         except ValueError:
             guests = 0
