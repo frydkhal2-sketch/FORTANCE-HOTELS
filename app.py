@@ -1,91 +1,107 @@
+
 @app.route("/group-bookings", methods=["GET", "POST"])
 @login_required
 def group_bookings():
+    # pylint: disable=too-many-return-statements,too-many-statements
     connection = db()
 
-    if request.method == "POST":
-        group_name = request.form.get("group_name", "").strip()
-        contact_name = request.form.get("contact_name", "").strip()
-        phone = request.form.get("phone", "").strip()
-        company_id = request.form.get("company_id") or None
-        hotel_id = request.form.get("hotel_id")
-        checkin = request.form.get("checkin", "").strip()
-        checkout = request.form.get("checkout", "").strip()
-        notes = request.form.get("notes", "").strip()
+    try:
+        if request.method == "POST":
+            # 1. قراءة بيانات المجموعة
+            group_name = request.form.get("group_name", "").strip()
+            contact_name = request.form.get("contact_name", "").strip()
+            phone = request.form.get("phone", "").strip()
+            company_id = request.form.get("company_id") or None
+            hotel_value = request.form.get("hotel_id", "").strip()
+            checkin = request.form.get("checkin", "").strip()
+            checkout = request.form.get("checkout", "").strip()
+            notes = request.form.get("notes", "").strip()
+            payment_method = request.form.get("payment_method", "cash").strip()
 
-        try:
-            guests = int(request.form.get("guests", "0") or 0)
-        except (ValueError, TypeError):
-            guests = 0
+            # 2. التحقق من الأعداد والمدفوعات
+            try:
+                guests = int(request.form.get("guests", "0") or 0)
+                requested_rooms = int(
+                    request.form.get(
+                        "requested_rooms",
+                        request.form.get("rooms_count", "0"),
+                    ) or 0
+                )
+                paid = float(request.form.get("paid", "0") or 0)
 
-        try:
-            requested_rooms = int(
-                request.form.get("requested_rooms",
-                                 request.form.get("rooms_count", "0")) or 0
-            )
-        except (ValueError, TypeError):
-            requested_rooms = 0
+                if guests < 0 or requested_rooms < 1 or paid < 0:
+                    raise ValueError
 
-        raw_room_ids = request.form.getlist("room_ids")
-        room_ids = sorted({
-            int(r)
-            for r in raw_room_ids
-            if r and r.isdigit()
-        })
+            except (ValueError, TypeError):
+                flash("تحقق من عدد النزلاء والغرف والمبلغ المدفوع.", "error")
+                return redirect(url_for("group_bookings"))
 
-        if not hotel_id:
-            connection.close()
-            flash("يرجى اختيار الفندق.", "error")
-            return redirect(url_for("group_bookings"))
+            # 3. تجهيز أرقام الغرف ومنع التكرار
+            raw_room_ids = request.form.getlist("room_ids")
 
-        if not group_name:
-            connection.close()
-            flash("يرجى إدخال اسم المجموعة.", "error")
-            return redirect(url_for("group_bookings"))
+            try:
+                room_ids = list(dict.fromkeys(
+                    int(room_id)
+                    for room_id in raw_room_ids
+                    if room_id and int(room_id) > 0
+                ))
+            except (ValueError, TypeError):
+                flash("اختيارات الغرف غير صحيحة.", "error")
+                return redirect(url_for("group_bookings"))
 
-        if not room_ids:
-            connection.close()
-            flash("يرجى اختيار غرفة واحدة على الأقل.", "error")
-            return redirect(url_for("group_bookings"))
+            if not group_name:
+                flash("يرجى إدخال اسم المجموعة.", "error")
+                return redirect(url_for("group_bookings"))
 
-        if requested_rooms != len(room_ids):
-            connection.close()
-            flash("عدد الغرف المطلوبة يجب أن يساوي عدد الغرف التي اخترتها.", "error")
-            return redirect(url_for("group_bookings"))
+            if not hotel_value:
+                flash("يرجى اختيار الفندق.", "error")
+                return redirect(url_for("group_bookings"))
 
-        if not checkin or not checkout:
-            connection.close()
-            flash("يرجى إدخال تواريخ الوصول والمغادرة.", "error")
-            return redirect(url_for("group_bookings"))
+            try:
+                hotel_id = int(hotel_value)
+            except (ValueError, TypeError):
+                flash("الفندق المحدد غير صحيح.", "error")
+                return redirect(url_for("group_bookings"))
 
-        try:
-            ci = datetime.fromisoformat(checkin)
-            co = datetime.fromisoformat(checkout)
-        except ValueError:
-            connection.close()
-            flash("تاريخ الوصول أو المغادرة غير صالح.", "error")
-            return redirect(url_for("group_bookings"))
+            if not room_ids:
+                flash("يرجى اختيار غرفة واحدة على الأقل.", "error")
+                return redirect(url_for("group_bookings"))
 
-        if co <= ci:
-            connection.close()
-            flash("تاريخ المغادرة يجب أن يكون بعد تاريخ الوصول.", "error")
-            return redirect(url_for("group_bookings"))
+            if requested_rooms != len(room_ids):
+                flash(
+                    "عدد الغرف المطلوبة يجب أن يساوي عدد الغرف التي اخترتها.",
+                    "error",
+                )
+                return redirect(url_for("group_bookings"))
 
-        nights = (co - ci).days
-        if nights <= 0:
-            connection.close()
-            flash("يجب أن يكون هناك ليلة واحدة على الأقل.", "error")
-            return redirect(url_for("group_bookings"))
+            # 4. التحقق من التواريخ
+            try:
+                ci = datetime.fromisoformat(checkin)
+                co = datetime.fromisoformat(checkout)
+            except (ValueError, TypeError):
+                flash("تاريخ الدخول أو المغادرة غير صحيح.", "error")
+                return redirect(url_for("group_bookings"))
 
-        try:
+            nights = (co - ci).days
+
+            if nights <= 0:
+                flash(
+                    "يجب أن يكون تاريخ المغادرة بعد تاريخ الدخول بيوم واحد على الأقل.",
+                    "error",
+                )
+                return redirect(url_for("group_bookings"))
+
+            # 5. بدء معاملة قاعدة البيانات
             connection.execute("BEGIN")
+
+            placeholders = ",".join("?" for _ in room_ids)
 
             room_rows = connection.execute(
                 f"""
                 SELECT *
                 FROM rooms
-                WHERE id IN ({",".join("?" for _ in room_ids)})
-                AND hotel_id = ?
+                WHERE id IN ({placeholders})
+                  AND hotel_id = ?
                 """,
                 (*room_ids, hotel_id),
             ).fetchall()
@@ -94,40 +110,61 @@ def group_bookings():
 
             if len(rooms_by_id) != len(room_ids):
                 connection.rollback()
-                connection.close()
-                flash("إحدى الغرف غير موجودة.", "error")
+                flash(
+                    "إحدى الغرف غير موجودة أو لا تتبع الفندق المحدد.",
+                    "error",
+                )
                 return redirect(url_for("group_bookings"))
 
+            # 6. التحقق من حالة كل غرفة وتعارض المواعيد
             valid_rooms = []
             total = 0.0
 
-            for rid in room_ids:
-                room = rooms_by_id[rid]
+            unavailable_statuses = {
+                "maintenance",
+                "out_of_service",
+                "cleaning",
+            }
 
-                if room["status"] in {"maintenance", "out_of_service", "cleaning"}:
+            for room_id in room_ids:
+                room = rooms_by_id[room_id]
+
+                if room["status"] in unavailable_statuses:
                     connection.rollback()
-                    connection.close()
-                    flash("إحدى الغرف غير متاحة.", "error")
+                    flash(
+                        f"الغرفة رقم {room['number']} غير متاحة حاليًا.",
+                        "error",
+                    )
                     return redirect(url_for("group_bookings"))
 
                 if (
-                    room_conflict(connection, rid, checkin, checkout)
-                    or group_room_conflict(connection, rid, checkin, checkout)
+                    room_conflict(
+                        connection, room_id, checkin, checkout
+                    )
+                    or group_room_conflict(
+                        connection, room_id, checkin, checkout
+                    )
                 ):
                     connection.rollback()
-                    connection.close()
-                    flash(f"الغرفة {room['number']} متعارضة مع حجز آخر.", "error")
+                    flash(
+                        f"الغرفة رقم {room['number']} لديها حجز "
+                        "يتعارض مع هذه التواريخ.",
+                        "error",
+                    )
                     return redirect(url_for("group_bookings"))
 
                 valid_rooms.append(room)
                 total += float(room["price"]) * nights
 
-            paid = max(0, min(float(request.form.get("paid", "0") or 0), total))
+            if paid > total:
+                paid = total
+
+            # 7. إنشاء رقم الحجز
             code = "GR-" + secrets.token_hex(3).upper()
 
             cursor = connection.execute(
                 """
-                INSERT INTO group_bookings(
+                INSERT INTO group_bookings (
                     code,
                     group_name,
                     contact_name,
@@ -145,7 +182,7 @@ def group_bookings():
                     created_by,
                     created_at
                 )
-                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     code,
@@ -169,15 +206,16 @@ def group_bookings():
 
             group_id = cursor.lastrowid
 
+            # 8. ربط الغرف بالحجز
             for room in valid_rooms:
                 connection.execute(
                     """
-                    INSERT INTO group_booking_rooms(
+                    INSERT INTO group_booking_rooms (
                         group_booking_id,
                         room_id,
                         price
                     )
-                    VALUES(?,?,?)
+                    VALUES (?, ?, ?)
                     """,
                     (
                         group_id,
@@ -186,19 +224,11 @@ def group_bookings():
                     ),
                 )
 
-                connection.execute(
-                    """
-                    UPDATE rooms
-                    SET status='booked'
-                    WHERE id=?
-                    """,
-                    (room["id"],),
-                )
-
+            # 9. تسجيل الدفعة إذا كان هناك مبلغ مدفوع
             if paid > 0:
                 connection.execute(
                     """
-                    INSERT INTO payments(
+                    INSERT INTO payments (
                         group_booking_id,
                         amount,
                         method,
@@ -207,60 +237,82 @@ def group_bookings():
                         created_at,
                         created_by
                     )
-                    VALUES(?,?,?,?,?,?,?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         group_id,
                         paid,
-                        request.form.get("payment_method", "cash"),
-                        request.form.get("payment_url", ""),
+                        payment_method,
+                        "",
                         "paid",
                         datetime.now().isoformat(),
                         session["uid"],
                     ),
                 )
 
+            # 10. حفظ جميع التغييرات
             connection.commit()
-            connection.close()
 
-            flash(f"تم إنشاء حجز المجموعة {code} لعدد {len(valid_rooms)} غرفة.", "ok")
+            flash(
+                f"تم إنشاء حجز المجموعة {code} بنجاح "
+                f"لعدد {len(valid_rooms)} غرفة.",
+                "ok",
+            )
             return redirect(url_for("group_bookings"))
 
-        except Exception:
-            connection.rollback()
-            connection.close()
-            flash("حدث خطأ أثناء إنشاء الحجز. حاول مرة أخرى.", "error")
-            return redirect(url_for("group_bookings"))
+        # 11. عرض الحجوزات المسجلة
+        rows = connection.execute(
+            """
+            SELECT
+                gb.*,
+                h.name AS hotel_name,
+                c.name AS company_name,
+                COALESCE(r.room_count, 0) AS room_count
+            FROM group_bookings AS gb
+            LEFT JOIN hotels AS h
+                ON h.id = gb.hotel_id
+            LEFT JOIN companies AS c
+                ON c.id = gb.company_id
+            LEFT JOIN (
+                SELECT
+                    group_booking_id,
+                    COUNT(*) AS room_count
+                FROM group_booking_rooms
+                GROUP BY group_booking_id
+            ) AS r
+                ON r.group_booking_id = gb.id
+            ORDER BY gb.created_at DESC
+            """
+        ).fetchall()
 
-    rows = connection.execute(
-        """
-        SELECT
-            gb.*,
-            h.name AS hotel_name,
-            c.name AS company_name,
-            COALESCE(r.room_count, 0) AS room_count
-        FROM group_bookings gb
-        LEFT JOIN hotels h ON h.id = gb.hotel_id
-        LEFT JOIN companies c ON c.id = gb.company_id
-        LEFT JOIN (
-            SELECT group_booking_id, COUNT(*) AS room_count
-            FROM group_booking_rooms
-            GROUP BY group_booking_id
-        ) r ON r.group_booking_id = gb.id
-        ORDER BY gb.created_at DESC
-        """
-    ).fetchall()
+        hotels_list = connection.execute(
+            "SELECT * FROM hotels ORDER BY name"
+        ).fetchall()
 
-    hotels_list = connection.execute("SELECT * FROM hotels ORDER BY name").fetchall()
-    companies_list = connection.execute("SELECT * FROM companies ORDER BY name").fetchall()
-    rooms_list = connection.execute("SELECT * FROM rooms ORDER BY number").fetchall()
+        companies_list = connection.execute(
+            "SELECT * FROM companies ORDER BY name"
+        ).fetchall()
 
-    connection.close()
+        rooms_list = connection.execute(
+            "SELECT * FROM rooms ORDER BY number"
+        ).fetchall()
 
-    return render_template(
-        "group_bookings.html",
-        group_bookings=rows,
-        hotels=hotels_list,
-        companies=companies_list,
-        rooms=rooms_list,
-    )
+        return render_template(
+            "group_bookings.html",
+            group_bookings=rows,
+            hotels=hotels_list,
+            companies=companies_list,
+            rooms=rooms_list,
+        )
+
+    except Exception:
+        connection.rollback()
+        app.logger.exception("Error in group_bookings")
+        flash(
+            "حدث خطأ أثناء معالجة حجز المجموعة. راجع سجل الأخطاء في Render.",
+            "error",
+        )
+        return redirect(url_for("group_bookings"))
+
+    finally:
+        connection.close()
