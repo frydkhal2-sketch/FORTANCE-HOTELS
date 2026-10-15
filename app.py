@@ -1720,3 +1720,1066 @@ def cancel_booking(bid):
     return redirect(
         url_for("bookings")
     )
+
+
+@app.route("/group-bookings", methods=["GET", "POST"])
+@login_required
+def group_bookings():
+    connection = db()
+
+    if request.method == "POST":
+        group_name = request.form.get(
+            "group_name", ""
+        ).strip()
+
+        contact_name = request.form.get(
+            "contact_name", ""
+        ).strip()
+
+        phone = request.form.get(
+            "phone", ""
+        ).strip()
+
+        company_id = (
+            request.form.get(
+                "company_id"
+            )
+            or None
+        )
+
+        hotel_id = request.form.get(
+            "hotel_id"
+        )
+
+        checkin = request.form.get(
+            "checkin", ""
+        )
+
+        checkout = request.form.get(
+            "checkout", ""
+        )
+
+        try:
+            guests = int(
+                request.form.get(
+                    "guests",
+                    "0"
+                ) or 0
+            )
+        except ValueError:
+            guests = 0
+
+        notes = request.form.get(
+            "notes", ""
+        ).strip()
+
+        room_ids = [
+            x
+            for x in request.form.getlist(
+                "room_ids"
+            )
+            if x
+        ]
+
+        try:
+            ci = datetime.fromisoformat(
+                checkin
+            )
+
+            co = datetime.fromisoformat(
+                checkout
+            )
+
+            nights = (
+                co - ci
+            ).days
+
+            if (
+                nights <= 0
+                or not group_name
+                or not room_ids
+            ):
+                raise ValueError
+
+        except ValueError:
+            connection.close()
+
+            flash(
+                "أدخل اسم المجموعة والتواريخ "
+                "واختر غرفة واحدة على الأقل.",
+                "error"
+            )
+
+            return redirect(
+                url_for("group_bookings")
+            )
+
+        valid_rooms = []
+        total = 0
+
+        for rid in room_ids:
+            room = connection.execute(
+                """
+                SELECT *
+                FROM rooms
+                WHERE id=?
+                AND hotel_id=?
+                """,
+                (
+                    rid,
+                    hotel_id
+                )
+            ).fetchone()
+
+            if not room:
+                connection.close()
+
+                flash(
+                    "إحدى الغرف غير موجودة.",
+                    "error"
+                )
+
+                return redirect(
+                    url_for("group_bookings")
+                )
+
+            if room["status"] in {
+                "maintenance",
+                "out_of_service",
+                "cleaning"
+            }:
+                connection.close()
+
+                flash(
+                    "إحدى الغرف غير متاحة.",
+                    "error"
+                )
+
+                return redirect(
+                    url_for("group_bookings")
+                )
+
+            if (
+                room_conflict(
+                    connection,
+                    rid,
+                    checkin,
+                    checkout
+                )
+                or group_room_conflict(
+                    connection,
+                    rid,
+                    checkin,
+                    checkout
+                )
+            ):
+                connection.close()
+
+                flash(
+                    f"الغرفة {room['number']} "
+                    "متعارضة مع حجز آخر.",
+                    "error"
+                )
+
+                return redirect(
+                    url_for("group_bookings")
+                )
+
+            valid_rooms.append(room)
+
+            total += (
+                float(room["price"])
+                * nights
+            )
+
+        paid = max(
+            0,
+            min(
+                float(
+                    request.form.get(
+                        "paid",
+                        "0"
+                    ) or 0
+                ),
+                total
+            )
+        )
+
+        code = (
+            "GR-"
+            + secrets.token_hex(3).upper()
+        )
+
+        cursor = connection.execute(
+            """
+            INSERT INTO group_bookings(
+                code,
+                group_name,
+                contact_name,
+                phone,
+                company_id,
+                hotel_id,
+                checkin,
+                checkout,
+                guests,
+                rooms_count,
+                total,
+                paid,
+                status,
+                notes,
+                created_by,
+                created_at
+            )
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            """,
+            (
+                code,
+                group_name,
+                contact_name,
+                phone,
+                company_id,
+                hotel_id,
+                checkin,
+                checkout,
+                guests,
+                len(valid_rooms),
+                total,
+                paid,
+                "confirmed",
+                notes,
+                session["uid"],
+                datetime.now().isoformat()
+            )
+        )
+
+        group_id = cursor.lastrowid
+
+        for room in valid_rooms:
+            connection.execute(
+                """
+                INSERT INTO group_booking_rooms(
+                    group_booking_id,
+                    room_id,
+                    price
+                )
+                VALUES(?,?,?)
+                """,
+                (
+                    group_id,
+                    room["id"],
+                    float(room["price"]) * nights
+                )
+            )
+
+            connection.execute(
+                """
+                UPDATE rooms
+                SET status='booked'
+                WHERE id=?
+                """,
+                (room["id"],)
+            )
+
+        if paid > 0:
+            connection.execute(
+                """
+                INSERT INTO payments(
+                    group_booking_id,
+                    amount,
+                    method,
+                    payment_url,
+                    status,
+                    created_at,
+                    created_by
+                )
+                VALUES(?,?,?,?,?,?,?)
+                """,
+                (
+                    group_id,
+                    paid,
+                    request.form.get(
+                        "payment_method",
+                        "cash"
+                    ),
+                    request.form.get(
+                        "payment_url",
+                        ""
+                    ),
+                    "paid",
+                    datetime.now().isoformat(),
+                    session["uid"]
+                )
+            )
+
+        connection.commit()
+        connection.close()
+
+        flash(
+            f"تم إنشاء حجز المجموعة {code} "
+            f"لعدد {len(valid_rooms)} غرفة.",
+            "ok"
+        )
+
+        return redirect(
+            url_for("group_bookings")
+        )
+
+    rows = connection.execute(
+        """
+        SELECT
+            gb.*,
+            h.name AS hotel,
+            c.name AS company
+        FROM group_bookings gb
+        JOIN hotels h
+            ON h.id=gb.hotel_id
+        LEFT JOIN companies c
+            ON c.id=gb.company_id
+        ORDER BY gb.id DESC
+        """
+    ).fetchall()
+
+    hotels_list = connection.execute(
+        """
+        SELECT *
+        FROM hotels
+        WHERE active=1
+        ORDER BY name
+        """
+    ).fetchall()
+
+    companies_list = connection.execute(
+        """
+        SELECT *
+        FROM companies
+        WHERE active=1
+        ORDER BY name
+        """
+    ).fetchall()
+
+    rooms_list = connection.execute(
+        """
+        SELECT
+            r.*,
+            h.name AS hotel
+        FROM rooms r
+        JOIN hotels h
+            ON h.id=r.hotel_id
+        WHERE r.status NOT IN(
+            'maintenance',
+            'out_of_service',
+            'cleaning'
+        )
+        ORDER BY h.name,r.number
+        """
+    ).fetchall()
+
+    connection.close()
+
+    return render_template(
+        "group_bookings.html",
+        group_bookings=rows,
+        hotels=hotels_list,
+        companies=companies_list,
+        rooms=rooms_list
+    )
+
+
+@app.route(
+    "/group-bookings/cancel/<int:gid>",
+    methods=["POST"]
+)
+@login_required
+def cancel_group_booking(gid):
+    connection = db()
+
+    group = connection.execute(
+        """
+        SELECT *
+        FROM group_bookings
+        WHERE id=?
+        """,
+        (gid,)
+    ).fetchone()
+
+    if not group:
+        connection.close()
+
+        flash(
+            "حجز المجموعة غير موجود.",
+            "error"
+        )
+
+        return redirect(
+            url_for("group_bookings")
+        )
+
+    connection.execute(
+        """
+        UPDATE group_bookings
+        SET status='cancelled'
+        WHERE id=?
+        """,
+        (gid,)
+    )
+
+    rooms = connection.execute(
+        """
+        SELECT room_id
+        FROM group_booking_rooms
+        WHERE group_booking_id=?
+        """,
+        (gid,)
+    ).fetchall()
+
+    for row in rooms:
+        rid = row["room_id"]
+
+        still_used = connection.execute(
+            """
+            SELECT 1
+            FROM bookings
+            WHERE room_id=?
+            AND status='confirmed'
+            AND checkin < ?
+            AND checkout > ?
+            LIMIT 1
+            """,
+            (
+                rid,
+                group["checkout"],
+                group["checkin"]
+            )
+        ).fetchone()
+
+        if not still_used:
+            connection.execute(
+                """
+                UPDATE rooms
+                SET status='available'
+                WHERE id=?
+                AND status='booked'
+                """,
+                (rid,)
+            )
+
+    connection.commit()
+    connection.close()
+
+    flash(
+        "تم إلغاء حجز المجموعة.",
+        "ok"
+    )
+
+    return redirect(
+        url_for("group_bookings")
+    )
+
+
+@app.route(
+    "/companies",
+    methods=["GET", "POST"]
+)
+@login_required
+def companies():
+    connection = db()
+
+    if request.method == "POST":
+        connection.execute(
+            """
+            INSERT INTO companies(
+                name,
+                contact_name,
+                phone,
+                email,
+                tax_number,
+                notes,
+                created_at
+            )
+            VALUES(?,?,?,?,?,?,?)
+            """,
+            (
+                request.form["name"].strip(),
+                request.form.get(
+                    "contact_name",
+                    ""
+                ).strip(),
+                request.form.get(
+                    "phone",
+                    ""
+                ).strip(),
+                request.form.get(
+                    "email",
+                    ""
+                ).strip(),
+                request.form.get(
+                    "tax_number",
+                    ""
+                ).strip(),
+                request.form.get(
+                    "notes",
+                    ""
+                ).strip(),
+                datetime.now().isoformat()
+            )
+        )
+
+        connection.commit()
+
+        flash(
+            "تمت إضافة الشركة.",
+            "ok"
+        )
+
+    rows = connection.execute(
+        """
+        SELECT *
+        FROM companies
+        ORDER BY id DESC
+        """
+    ).fetchall()
+
+    connection.close()
+
+    return render_template(
+        "companies.html",
+        companies=rows
+    )
+
+
+@app.route("/invoices/<int:bid>")
+@login_required
+def invoice(bid):
+    connection = db()
+
+    booking = connection.execute(
+        """
+        SELECT
+            b.*,
+            cu.name AS customer,
+            cu.phone AS phone,
+            h.name AS hotel,
+            h.city AS city,
+            h.phone AS hotel_phone,
+            r.number AS room,
+            r.room_type AS room_type
+        FROM bookings b
+        JOIN customers cu
+            ON cu.id=b.customer_id
+        JOIN hotels h
+            ON h.id=b.hotel_id
+        JOIN rooms r
+            ON r.id=b.room_id
+        WHERE b.id=?
+        """,
+        (bid,)
+    ).fetchone()
+
+    settings = get_settings(connection)
+
+    connection.close()
+
+    if not booking:
+        return "الحجز غير موجود", 404
+
+    remaining = max(
+        0,
+        float(booking["price"])
+        - float(booking["paid"])
+    )
+
+    return render_template(
+        "invoice.html",
+        b=booking,
+        settings=settings,
+        remaining=remaining
+    )
+
+
+@app.route(
+    "/seasons",
+    methods=["GET", "POST"]
+)
+@login_required
+def seasons():
+    connection = db()
+
+    if request.method == "POST":
+        connection.execute(
+            """
+            INSERT INTO seasons(
+                name,start_date,end_date,notes
+            )
+            VALUES(?,?,?,?)
+            """,
+            (
+                request.form["name"],
+                request.form["start_date"],
+                request.form["end_date"],
+                request.form.get(
+                    "notes",
+                    ""
+                )
+            )
+        )
+
+        connection.commit()
+
+        flash(
+            "تمت إضافة الموسم.",
+            "ok"
+        )
+
+    rows = connection.execute(
+        """
+        SELECT *
+        FROM seasons
+        ORDER BY start_date DESC
+        """
+    ).fetchall()
+
+    connection.close()
+
+    return render_template(
+        "seasons.html",
+        seasons=rows
+    )
+
+
+@app.route("/reports")
+@login_required
+def reports():
+    connection = db()
+
+    rows = connection.execute(
+        """
+        SELECT
+            h.name AS hotel,
+            COUNT(b.id) AS bookings,
+            COALESCE(
+                SUM(
+                    CASE
+                        WHEN b.status!='cancelled'
+                        THEN b.paid
+                        ELSE 0
+                    END
+                ),
+                0
+            ) AS paid,
+            COALESCE(
+                SUM(
+                    CASE
+                        WHEN b.status!='cancelled'
+                        THEN b.price
+                        ELSE 0
+                    END
+                ),
+                0
+            ) AS total
+        FROM hotels h
+        LEFT JOIN bookings b
+            ON b.hotel_id=h.id
+        GROUP BY h.id
+        ORDER BY h.name
+        """
+    ).fetchall()
+
+    connection.close()
+
+    return render_template(
+        "reports.html",
+        rows=rows
+    )
+
+
+@app.route(
+    "/settings",
+    methods=["GET", "POST"]
+)
+@login_required
+@admin_required
+def settings():
+    connection = db()
+
+    if request.method == "POST":
+        for key in DEFAULT_SETTINGS:
+            save_setting(
+                connection,
+                key,
+                request.form.get(
+                    key,
+                    ""
+                ).strip()
+            )
+
+        connection.commit()
+
+        flash(
+            "تم حفظ إعدادات النظام بنجاح.",
+            "ok"
+        )
+
+        connection.close()
+
+        return redirect(
+            url_for("settings")
+        )
+
+    settings_data = get_settings(
+        connection
+    )
+
+    connection.close()
+
+    return render_template(
+        "settings.html",
+        settings=settings_data
+    )
+
+
+def moyasar_get_invoice(invoice_id):
+    secret = os.environ.get("MOYASAR_SECRET_KEY", "").strip()
+
+    if not secret:
+        raise RuntimeError("مفتاح Moyasar السري غير مضبوط")
+
+    response = requests.get(
+        f"https://api.moyasar.com/v1/invoices/{invoice_id}",
+        auth=(secret, ""),
+        timeout=20,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+@app.route("/payments/link/<int:bid>", methods=["POST"])
+@login_required
+def create_payment_link(bid):
+    connection = db()
+
+    try:
+        booking = connection.execute(
+            """
+            SELECT b.*, c.name AS customer_name
+            FROM bookings b
+            JOIN customers c ON c.id = b.customer_id
+            WHERE b.id = ?
+            """,
+            (bid,),
+        ).fetchone()
+
+        if not booking:
+            flash("الحجز غير موجود.", "error")
+            return redirect(url_for("bookings"))
+
+        if booking["status"] == "cancelled":
+            flash("لا يمكن إنشاء رابط دفع لحجز ملغي.", "error")
+            return redirect(url_for("bookings"))
+
+        remaining = round(
+            float(booking["price"]) - float(booking["paid"]),
+            2,
+        )
+
+        if remaining <= 0:
+            flash("تم سداد قيمة الحجز بالكامل.", "error")
+            return redirect(url_for("bookings"))
+
+        secret = os.environ.get("MOYASAR_SECRET_KEY", "").strip()
+        base_url = os.environ.get(
+            "PUBLIC_BASE_URL",
+            "https://fortance-hotels.onrender.com",
+        ).rstrip("/")
+
+        if not secret:
+            flash("أضف MOYASAR_SECRET_KEY في Render أولاً.", "error")
+            return redirect(url_for("bookings"))
+
+        old_id = booking["moyasar_invoice_id"] or ""
+
+        if old_id:
+            try:
+                old_invoice = moyasar_get_invoice(old_id)
+
+                if (
+                    old_invoice.get("status") == "initiated"
+                    and old_invoice.get("amount") == round(remaining * 100)
+                    and old_invoice.get("url")
+                ):
+                    connection.execute(
+                        "UPDATE bookings SET payment_url=? WHERE id=?",
+                        (old_invoice["url"], bid),
+                    )
+                    connection.commit()
+                    flash("رابط الدفع السابق ما زال صالحاً.", "ok")
+                    return redirect(url_for("bookings"))
+
+            except (requests.RequestException, ValueError):
+                pass
+
+        payload = {
+            "amount": round(remaining * 100),
+            "currency": "SAR",
+            "description": f"FORTANCE HOTELS - Booking {booking['code']}",
+            "callback_url": base_url + "/payments/moyasar/callback",
+            "success_url": base_url + "/payments/moyasar/return",
+            "back_url": base_url + "/bookings",
+            "metadata": {
+                "booking_id": str(bid),
+                "booking_code": str(booking["code"]),
+            },
+        }
+
+        response = requests.post(
+            "https://api.moyasar.com/v1/invoices",
+            auth=(secret, ""),
+            json=payload,
+            timeout=25,
+        )
+        response.raise_for_status()
+        invoice_data = response.json()
+
+        invoice_id = invoice_data.get("id")
+        payment_url = invoice_data.get("url")
+
+        if not invoice_id or not payment_url:
+            raise RuntimeError("لم يُرجع Moyasar رقم الفاتورة ورابط الدفع.")
+
+        connection.execute(
+            """
+            UPDATE bookings
+            SET payment_url=?,
+                moyasar_invoice_id=?,
+                payment_status='pending'
+            WHERE id=?
+            """,
+            (payment_url, invoice_id, bid),
+        )
+
+        connection.execute(
+            """
+            INSERT INTO payments
+                (booking_id, amount, method, payment_url,
+                 status, reference, created_at, created_by)
+            VALUES (?, ?, 'moyasar', ?, 'pending', ?, ?, ?)
+            """,
+            (
+                bid,
+                remaining,
+                payment_url,
+                invoice_id,
+                datetime.now().isoformat(timespec="seconds"),
+                session.get("uid"),
+            ),
+        )
+
+        connection.commit()
+        flash("تم إنشاء رابط الدفع بنجاح.", "ok")
+
+    except requests.RequestException:
+        connection.rollback()
+        app.logger.exception("Moyasar invoice creation failed")
+        flash("تعذر إنشاء رابط الدفع. تحقق من إعدادات Moyasar.", "error")
+
+    except (RuntimeError, ValueError):
+        connection.rollback()
+        app.logger.exception("Payment setup error")
+        flash("تعذر إعداد الدفع. راجع إعدادات النظام.", "error")
+
+    finally:
+        connection.close()
+
+    return redirect(url_for("bookings"))
+
+
+@app.route("/payments/moyasar/callback", methods=["POST"])
+def moyasar_callback():
+    raw_body = request.get_data(cache=True)
+    secret = os.environ.get("MOYASAR_SECRET_KEY", "").strip()
+
+    if not secret:
+        return jsonify({"error": "missing payment secret"}), 500
+
+    signature = (
+        request.headers.get("X-Moyasar-Signature")
+        or request.headers.get("X-Signature")
+        or ""
+    )
+    expected = hmac.new(
+        secret.encode("utf-8"),
+        raw_body,
+        hashlib.sha256,
+    ).hexdigest()
+
+    if not signature or not hmac.compare_digest(signature.lower(), expected.lower()):
+        return jsonify({"error": "invalid signature"}), 401
+
+    data = request.get_json(silent=True) or {}
+    invoice_id = data.get("id")
+
+    if not invoice_id:
+        return jsonify({"error": "missing invoice id"}), 400
+
+    connection = db()
+
+    try:
+        invoice_data = moyasar_get_invoice(str(invoice_id))
+
+        if invoice_data.get("id") != invoice_id:
+            return jsonify({"error": "invoice mismatch"}), 400
+
+        metadata = invoice_data.get("metadata") or {}
+        booking_id = metadata.get("booking_id")
+
+        if not booking_id:
+            return jsonify({"error": "missing booking reference"}), 400
+
+        booking = connection.execute(
+            "SELECT * FROM bookings WHERE id=?",
+            (booking_id,),
+        ).fetchone()
+
+        if not booking:
+            return jsonify({"error": "booking not found"}), 404
+
+        if booking["moyasar_invoice_id"] != invoice_id:
+            return jsonify({"error": "invoice not linked to booking"}), 400
+
+        expected_amount = round(
+            max(0, float(booking["price"]) - float(booking["paid"])) * 100
+        )
+
+        if (
+            invoice_data.get("amount") != expected_amount
+            or invoice_data.get("currency") != "SAR"
+        ):
+            return jsonify({"error": "amount or currency mismatch"}), 400
+
+        status = invoice_data.get("status")
+
+        if status == "paid":
+            payment = connection.execute(
+                """
+                SELECT * FROM payments
+                WHERE reference=? AND booking_id=?
+                """,
+                (invoice_id, booking_id),
+            ).fetchone()
+
+            if payment and payment["status"] != "paid":
+                connection.execute(
+                    """
+                    UPDATE bookings
+                    SET paid = MIN(price, paid + ?),
+                        payment_status='paid'
+                    WHERE id=?
+                    """,
+                    (payment["amount"], booking_id),
+                )
+
+                connection.execute(
+                    """
+                    UPDATE payments SET status='paid'
+                    WHERE id=?
+                    """,
+                    (payment["id"],),
+                )
+
+                connection.commit()
+
+        elif status in ("failed", "expired", "canceled", "voided"):
+            connection.execute(
+                """
+                UPDATE payments SET status=?
+                WHERE reference=? AND booking_id=?
+                  AND status='pending'
+                """,
+                (status, invoice_id, booking_id),
+            )
+            connection.execute(
+                """
+                UPDATE bookings SET payment_status=?
+                WHERE id=? AND payment_status!='paid'
+                """,
+                (status, booking_id),
+            )
+            connection.commit()
+
+        return jsonify({"received": True}), 200
+
+    except (requests.RequestException, ValueError):
+        connection.rollback()
+        app.logger.exception("Moyasar callback verification failed")
+        return jsonify({"error": "verification failed"}), 502
+
+    finally:
+        connection.close()
+
+
+@app.route("/payments/moyasar/return")
+@login_required
+def moyasar_return():
+    invoice_id = request.args.get("id", "").strip()
+
+    if not invoice_id:
+        flash(
+            "عدت من صفحة الدفع. تحقق من حالة الدفع في الحجوزات.",
+            "ok",
+        )
+        return redirect(url_for("bookings"))
+
+    connection = db()
+
+    try:
+        invoice_data = moyasar_get_invoice(invoice_id)
+        metadata = invoice_data.get("metadata") or {}
+        booking_id = metadata.get("booking_id")
+
+        booking = connection.execute(
+            "SELECT * FROM bookings WHERE id=?",
+            (booking_id,),
+        ).fetchone() if booking_id else None
+
+        if not booking or booking["moyasar_invoice_id"] != invoice_id:
+            flash("تعذر مطابقة عملية الدفع مع الحجز.", "error")
+        elif (
+            invoice_data.get("status") == "paid"
+            and invoice_data.get("amount")
+                == round(max(
+                    0,
+                    float(booking["price"]) - float(booking["paid"])
+                ) * 100)
+            and invoice_data.get("currency") == "SAR"
+        ):
+            flash(
+                "تم التحقق من الدفع. إذا لم يتحدث الرصيد، انتظر إشعار الدفع.",
+                "ok",
+            )
+        else:
+            flash(
+                "لم يتم تأكيد الدفع بعد. حالة الفاتورة: "
+                + str(invoice_data.get("status")),
+                "error",
+            )
+
+    except (requests.RequestException, ValueError):
+        app.logger.exception("Moyasar return verification failed")
+        flash("تعذر التحقق من الدفع الآن. حاول تحديث الحجوزات لاحقاً.", "error")
+
+    finally:
+        connection.close()
+
+    return redirect(url_for("bookings"))
+
+
+# Initialize the database when the application module loads.
+# Keep existing tables and records; do not delete the database.
+init_db()
+
+if __name__ == "__main__":
+    app.run(
+        debug=False,
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", "5000"))
+    )
+
