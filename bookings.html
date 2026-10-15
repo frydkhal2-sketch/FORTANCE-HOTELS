@@ -174,7 +174,16 @@
     </div>
 
     <div class="panel">
-        <h2>➕ إنشاء حجز جديد</h2>
+      
+<div class="form-heading">
+    <h2>إنشاء حجز جديد</h2>
+    <button type="button"
+            class="toggle-form-btn"
+            id="toggle-booking-form"
+            aria-expanded="true">
+        − إخفاء النموذج
+    </button>
+</div>
 
         {% if hotels and rooms %}
         <form
