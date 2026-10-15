@@ -358,6 +358,8 @@ def admin_required(function):
         return function(*args, **kwargs)
 
     return wrapper
+
+
 def accountant_required(function):
     @wraps(function)
     def wrapper(*args, **kwargs):
@@ -512,6 +514,7 @@ def get_financial_summary(connection, start_date=None, end_date=None, hotel_id=N
         "categories": [dict(row) for row in categories]
     }
 
+
 @app.context_processor
 def ctx():
     return {
@@ -519,7 +522,26 @@ def ctx():
         "user_name": session.get("name"),
         "user_role": session.get("role"),
         "system_settings": get_settings()
-  checkin]
+    }
+
+
+def room_conflict(
+    connection,
+    room_id,
+    checkin,
+    checkout,
+    exclude_booking_id=None
+):
+    sql = """
+        SELECT id
+        FROM bookings
+        WHERE room_id=?
+          AND status='confirmed'
+          AND checkin < ?
+          AND checkout > ?
+    """
+
+    params = [room_id, checkout, checkin]
 
     if exclude_booking_id is not None:
         sql += " AND id != ?"
@@ -601,7 +623,11 @@ def login():
 
 
 @app.route("/logout")
-def logout():   }
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
+
+
 @app.route("/finance")
 @login_required
 @accountant_required
@@ -691,26 +717,6 @@ def export_finance_csv():
             "Content-Disposition": "attachment; filename=finance_report.csv"
         }
     )
-
-def room_conflict(
-    connection,
-    room_id,
-    checkin,
-    checkout,
-    exclude_booking_id=None
-):
-    sql = """
-        SELECT id
-        FROM bookings
-        WHERE room_id=?
-          AND status='confirmed'
-          AND checkin < ?
-          AND checkout > ?
-    """
-
-    params = [room_id, checkout,
-    session.clear()
-    return redirect(url_for("login"))
 
 
 @app.route("/dashboard")
@@ -1692,11 +1698,11 @@ def cancel_booking(bid):
         url_for("bookings")
     )
 
+
 @app.route("/group-bookings", methods=["GET", "POST"])
 @login_required
 def group_bookings():
     connection = db()
-
 
     if request.method == "POST":
         group_name = request.form.get(
