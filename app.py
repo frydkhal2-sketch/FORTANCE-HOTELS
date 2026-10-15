@@ -1291,10 +1291,15 @@ def room_status(rid):
 def bookings():
     connection = db()
 
-    if request.method == "POST":
-        name = request.form.get(
-            "customer", ""
-        ).strip()
+   name = request.form.get(
+    "name",
+    request.form.get("customer", "")
+).strip()
+
+if not name:
+    connection.close()
+    flash("يرجى إدخال اسم النزيل.", "error")
+    return redirect(url_for("bookings"))
 
         phone = request.form.get(
             "phone", ""
