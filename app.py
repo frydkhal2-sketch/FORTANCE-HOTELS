@@ -1,22 +1,11 @@
-import csv
-import io
-import os
+from flask import jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 import sqlite3
+import os
 import hashlib
+import hmac
 import secrets
 import requests
-
-from flask import (
-    Flask,
-    Response,
-    flash,
-    jsonify,
-    redirect,
-    render_template,
-    request,
-    session,
-    url_for,
-)
 from functools import wraps
 from datetime import datetime, date
 
@@ -83,6 +72,7 @@ def get_settings(connection=None):
     ).fetchall()
 
     settings = DEFAULT_SETTINGS.copy()
+
     for row in rows:
         settings[row["key"]] = row["value"] or ""
 
@@ -251,18 +241,38 @@ def init_db():
         """
     )
 
-    ensure_column(connection, "bookings", "payment_method", "TEXT DEFAULT 'cash'")
-    ensure_column(connection, "bookings", "payment_url", "TEXT DEFAULT ''")
-    ensure_column(connection, "bookings", "company_id", "INTEGER")
-    ensure_column(connection, "bookings", "group_booking_id", "INTEGER")
-    ensure_column(connection, "bookings", "moyasar_invoice_id", "TEXT DEFAULT ''")
-    ensure_column(connection, "bookings", "payment_status", "TEXT DEFAULT 'pending'")
+    # إضافة أعمدة جديدة للقاعدة الحالية بدون حذف البيانات القديمة.
+    ensure_column(
+        connection, "bookings", "payment_method",
+        "TEXT DEFAULT 'cash'"
+    )
+    ensure_column(
+        connection, "bookings", "payment_url",
+        "TEXT DEFAULT ''"
+    )
+    ensure_column(
+        connection, "bookings", "company_id",
+        "INTEGER"
+    )
+    ensure_column(
+        connection, "bookings", "group_booking_id",
+        "INTEGER"
+    )
+    ensure_column(
+        connection, "bookings", "moyasar_invoice_id",
+        "TEXT DEFAULT ''"
+    )
+    ensure_column(
+        connection, "bookings", "payment_status",
+        "TEXT DEFAULT 'pending'"
+    )
 
     for key, value in DEFAULT_SETTINGS.items():
         exists = connection.execute(
             "SELECT 1 FROM settings WHERE key=?",
             (key,)
         ).fetchone()
+
         if exists is None:
             connection.execute(
                 "INSERT INTO settings(key,value) VALUES(?,?)",
@@ -296,13 +306,30 @@ def init_db():
             ("فندق ريان الجوار", "مكة المكرمة", "")
         )
 
-    connection.execute(
+    # إزالة الغرف التجريبية القديمة مرة واحدة فقط،
+    # وفقط إذا لم توجد حجوزات حالية مرتبطة بها.
+    cleanup = connection.execute(
         """
-        INSERT INTO settings(key, value)
-        VALUES('initial_rooms_cleanup', 'done')
-        ON CONFLICT(key) DO NOTHING
+        SELECT value
+        FROM settings
+        WHERE key='initial_rooms_cleanup'
         """
-    )
+    ).fetchone()
+
+    if cleanup is None:
+        booked_rooms = connection.execute(
+            "SELECT COUNT(*) AS n FROM bookings"
+        ).fetchone()["n"]
+
+        if booked_rooms == 0:
+            connection.execute("DELETE FROM rooms")
+
+        connection.execute(
+            """
+            INSERT INTO settings(key,value)
+            VALUES('initial_rooms_cleanup','done')
+            """
+        )
 
     connection.commit()
     connection.close()
@@ -313,7 +340,9 @@ def login_required(function):
     def wrapper(*args, **kwargs):
         if "uid" not in session:
             return redirect(url_for("login"))
+
         return function(*args, **kwargs)
+
     return wrapper
 
 
@@ -321,9 +350,14 @@ def admin_required(function):
     @wraps(function)
     def wrapper(*args, **kwargs):
         if session.get("role") != "admin":
-            flash("هذه الصفحة متاحة لمدير النظام فقط.", "error")
+            flash(
+                "هذه الصفحة متاحة لمدير النظام فقط.",
+                "error"
+            )
             return redirect(url_for("dashboard"))
+
         return function(*args, **kwargs)
+
     return wrapper
 
 
@@ -331,7 +365,10 @@ def accountant_required(function):
     @wraps(function)
     def wrapper(*args, **kwargs):
         if session.get("role") not in {"admin", "accountant"}:
-            flash("هذه الصفحة متاحة لمدير النظام أو المحاسب فقط.", "error")
+            flash(
+                "هذه الصفحة متاحة لمدير النظام أو المحاسب فقط.",
+                "error"
+            )
             return redirect(url_for("dashboard"))
         return function(*args, **kwargs)
     return wrapper
@@ -340,8 +377,10 @@ def accountant_required(function):
 def normalize_date_range(start_date=None, end_date=None):
     if start_date and end_date:
         return start_date, end_date
+
     if start_date and not end_date:
         return start_date, start_date
+
     if end_date and not start_date:
         return end_date, end_date
 
@@ -355,6 +394,7 @@ def get_financial_summary(connection, start_date=None, end_date=None, hotel_id=N
 
     hotel_filter = ""
     params = [start_date, end_date]
+
     if hotel_id:
         hotel_filter = " AND hotel_id=? "
         params.append(hotel_id)
@@ -366,7 +406,10 @@ def get_financial_summary(connection, start_date=None, end_date=None, hotel_id=N
           AND substr(created_at, 1, 10) BETWEEN ? AND ?
         {hotel_filter}
     """
-    bookings_revenue = connection.execute(bookings_revenue_q, params).fetchone()["total"]
+    bookings_revenue = connection.execute(
+        bookings_revenue_q,
+        params
+    ).fetchone()["total"]
 
     group_revenue_q = f"""
         SELECT COALESCE(SUM(paid), 0) AS total
@@ -375,7 +418,10 @@ def get_financial_summary(connection, start_date=None, end_date=None, hotel_id=N
           AND substr(created_at, 1, 10) BETWEEN ? AND ?
         {hotel_filter}
     """
-    group_revenue = connection.execute(group_revenue_q, params).fetchone()["total"]
+    group_revenue = connection.execute(
+        group_revenue_q,
+        params
+    ).fetchone()["total"]
 
     expenses_q = """
         SELECT COALESCE(SUM(amount), 0) AS total
@@ -383,10 +429,15 @@ def get_financial_summary(connection, start_date=None, end_date=None, hotel_id=N
         WHERE substr(expense_date, 1, 10) BETWEEN ? AND ?
     """
     expense_params = [start_date, end_date]
+
     if hotel_id:
         expenses_q += " AND hotel_id=?"
         expense_params.append(hotel_id)
-    expenses_total = connection.execute(expenses_q, expense_params).fetchone()["total"]
+
+    expenses_total = connection.execute(
+        expenses_q,
+        expense_params
+    ).fetchone()["total"]
 
     total_revenue = float(bookings_revenue) + float(group_revenue)
     profit = total_revenue - float(expenses_total)
@@ -426,8 +477,6 @@ def get_financial_summary(connection, start_date=None, end_date=None, hotel_id=N
 
     hotel_breakdown = []
     for row in breakdown_rows:
-        if hotel_id and str(row["id"]) != str(hotel_id):
-            continue
         revenue = float(row["booking_revenue"]) + float(row["group_revenue"])
         expense = float(row["expenses"])
         hotel_breakdown.append({
@@ -435,21 +484,25 @@ def get_financial_summary(connection, start_date=None, end_date=None, hotel_id=N
             "name": row["name"],
             "revenue": revenue,
             "expenses": expense,
-            "profit": revenue - expense,
+            "profit": revenue - expense
         })
 
     category_q = """
         SELECT category, COALESCE(SUM(amount), 0) AS total
         FROM expenses
         WHERE substr(expense_date, 1, 10) BETWEEN ? AND ?
+        GROUP BY category
+        ORDER BY total DESC
     """
     category_params = [start_date, end_date]
     if hotel_id:
         category_q += " AND hotel_id=?"
         category_params.append(hotel_id)
-    category_q += " GROUP BY category ORDER BY total DESC"
 
-    categories = connection.execute(category_q, category_params).fetchall()
+    categories = connection.execute(
+        category_q,
+        category_params
+    ).fetchall()
 
     return {
         "start_date": start_date,
@@ -459,7 +512,7 @@ def get_financial_summary(connection, start_date=None, end_date=None, hotel_id=N
         "expenses": float(expenses_total),
         "profit": profit,
         "hotel_breakdown": hotel_breakdown,
-        "categories": [dict(row) for row in categories],
+        "categories": [dict(row) for row in categories]
     }
 
 
@@ -469,7 +522,7 @@ def ctx():
         "ROLES": ROLES,
         "user_name": session.get("name"),
         "user_role": session.get("role"),
-        "system_settings": get_settings(),
+        "system_settings": get_settings()
     }
 
 
@@ -495,7 +548,13 @@ def ensure_valid_session():
     return None
 
 
-def room_conflict(connection, room_id, checkin, checkout, exclude_booking_id=None):
+def room_conflict(
+    connection,
+    room_id,
+    checkin,
+    checkout,
+    exclude_booking_id=None
+):
     sql = """
         SELECT id
         FROM bookings
@@ -504,6 +563,7 @@ def room_conflict(connection, room_id, checkin, checkout, exclude_booking_id=Non
           AND checkin < ?
           AND checkout > ?
     """
+
     params = [room_id, checkout, checkin]
 
     if exclude_booking_id is not None:
@@ -513,20 +573,25 @@ def room_conflict(connection, room_id, checkin, checkout, exclude_booking_id=Non
     return connection.execute(sql, params).fetchone() is not None
 
 
-def group_room_conflict(connection, room_id, checkin, checkout):
+def group_room_conflict(
+    connection,
+    room_id,
+    checkin,
+    checkout
+):
     return connection.execute(
         """
         SELECT gbr.id
         FROM group_booking_rooms gbr
         JOIN group_bookings gb
-          ON gb.id=gbr.group_booking_id
+            ON gb.id=gbr.group_booking_id
         WHERE gbr.room_id=?
           AND gb.status='confirmed'
           AND gb.checkin < ?
           AND gb.checkout > ?
         LIMIT 1
         """,
-        (room_id, checkout, checkin),
+        (room_id, checkout, checkin)
     ).fetchone() is not None
 
 
@@ -534,16 +599,23 @@ def group_room_conflict(connection, room_id, checkin, checkout):
 def index():
     if "uid" in session:
         return redirect(url_for("dashboard"))
+
     return redirect(url_for("login"))
 
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        username = request.form.get("username", "").strip()
-        password = request.form.get("password", "")
+        username = request.form.get(
+            "username", ""
+        ).strip()
+
+        password = request.form.get(
+            "password", ""
+        )
 
         connection = db()
+
         user = connection.execute(
             """
             SELECT *
@@ -551,15 +623,24 @@ def login():
             WHERE username=?
             AND active=1
             """,
-            (username,),
+            (username,)
         ).fetchone()
+
         connection.close()
 
         if user and user["password"] == hash_pw(password):
-            session.update(uid=user["id"], name=user["name"], role=user["role"])
+            session.update(
+                uid=user["id"],
+                name=user["name"],
+                role=user["role"]
+            )
+
             return redirect(url_for("dashboard"))
 
-        flash("بيانات الدخول غير صحيحة.", "error")
+        flash(
+            "بيانات الدخول غير صحيحة.",
+            "error"
+        )
 
     return render_template("login.html")
 
@@ -590,7 +671,7 @@ def finance():
         connection,
         start_date=start_date,
         end_date=end_date,
-        hotel_id=hotel_id,
+        hotel_id=hotel_id
     )
 
     hotels_list = connection.execute(
@@ -601,6 +682,7 @@ def finance():
         ORDER BY name
         """
     ).fetchall()
+
     connection.close()
 
     return render_template(
@@ -613,7 +695,7 @@ def finance():
         expenses=summary["expenses"],
         profit=summary["profit"],
         hotel_breakdown=summary["hotel_breakdown"],
-        categories=summary["categories"],
+        categories=summary["categories"]
     )
 
 
@@ -637,33 +719,26 @@ def export_finance_csv():
         connection,
         start_date=start_date,
         end_date=end_date,
-        hotel_id=hotel_id,
+        hotel_id=hotel_id
     )
 
-    buffer = io.StringIO(newline="")
-    writer = csv.writer(buffer)
-    writer.writerow(["تقرير مالي", "من تاريخ", summary["start_date"], "إلى تاريخ", summary["end_date"]])
-    writer.writerow([])
-    writer.writerow(["إجمالي الإيرادات", summary["revenue"]])
-    writer.writerow(["إجمالي المصروفات", summary["expenses"]])
-    writer.writerow(["صافي الربح", summary["profit"]])
-    writer.writerow([])
-    writer.writerow(["الفندق", "الإيرادات", "المصروفات", "صافي الربح"])
+    output = []
+    output.append("hotel,revenue,expenses,profit")
 
     for row in summary["hotel_breakdown"]:
-        writer.writerow([row["name"], row["revenue"], row["expenses"], row["profit"]])
-
-    writer.writerow([])
-    writer.writerow(["تصنيف المصروف", "الإجمالي"])
-    for row in summary["categories"]:
-        writer.writerow([row["category"], row["total"]])
+        output.append(
+            f"{row['name']},{row['revenue']},{row['expenses']},{row['profit']}"
+        )
 
     connection.close()
-    csv_content = "\ufeff" + buffer.getvalue()
-    return Response(
-        csv_content,
-        mimetype="text/csv; charset=utf-8",
-        headers={"Content-Disposition": "attachment; filename=fortance_finance.csv"},
+
+    return (
+        "\n".join(output),
+        200,
+        {
+            "Content-Type": "text/csv; charset=utf-8",
+            "Content-Disposition": "attachment; filename=finance_report.csv"
+        }
     )
 
 
@@ -674,16 +749,20 @@ def dashboard():
 
     data = {
         "hotels": connection.execute(
-            "SELECT COUNT(*) AS n FROM hotels WHERE active=1"
+            """
+            SELECT COUNT(*) AS n
+            FROM hotels
+            WHERE active=1
+            """
         ).fetchone()["n"],
+
         "rooms": connection.execute(
             """
             SELECT COUNT(*) AS n
-            FROM rooms r
-            JOIN hotels h ON h.id=r.hotel_id
-            WHERE h.active=1
+            FROM rooms
             """
         ).fetchone()["n"],
+
         "booked": connection.execute(
             """
             SELECT COUNT(*) AS n
@@ -691,28 +770,15 @@ def dashboard():
             WHERE status='confirmed'
             """
         ).fetchone()["n"],
-        "group_bookings": connection.execute(
-            """
-            SELECT COUNT(*) AS n
-            FROM group_bookings
-            WHERE status='confirmed'
-            """
-        ).fetchone()["n"],
+
         "revenue": connection.execute(
             """
-            SELECT
-                COALESCE((
-                    SELECT SUM(paid)
-                    FROM bookings
-                    WHERE status!='cancelled'
-                ), 0) +
-                COALESCE((
-                    SELECT SUM(paid)
-                    FROM group_bookings
-                    WHERE status!='cancelled'
-                ), 0) AS total
+            SELECT COALESCE(SUM(paid),0) AS n
+            FROM bookings
+            WHERE status!='cancelled'
             """
-        ).fetchone()["total"],
+        ).fetchone()["n"],
+
         "bookings": connection.execute(
             """
             SELECT
@@ -727,12 +793,17 @@ def dashboard():
             ORDER BY b.id DESC
             LIMIT 8
             """
-        ).fetchall(),
+        ).fetchall()
     }
 
     connection.close()
+
     data["now"] = date.today().isoformat()
-    return render_template("dashboard.html", **data)
+
+    return render_template(
+        "dashboard.html",
+        **data
+    )
 
 
 @app.route("/employees", methods=["GET", "POST"])
@@ -755,13 +826,22 @@ def employees():
                     request.form["username"].strip(),
                     hash_pw(request.form["password"]),
                     request.form["role"],
-                    datetime.now().isoformat(),
-                ),
+                    datetime.now().isoformat()
+                )
             )
+
             connection.commit()
-            flash("تمت إضافة الموظف.", "ok")
+
+            flash(
+                "تمت إضافة الموظف.",
+                "ok"
+            )
+
         except sqlite3.IntegrityError:
-            flash("اسم المستخدم مستخدم بالفعل.", "error")
+            flash(
+                "اسم المستخدم مستخدم بالفعل.",
+                "error"
+            )
 
     rows = connection.execute(
         """
@@ -770,28 +850,42 @@ def employees():
         ORDER BY id DESC
         """
     ).fetchall()
+
     connection.close()
-    return render_template("employees.html", employees=rows)
+
+    return render_template(
+        "employees.html",
+        employees=rows
+    )
 
 
-@app.route("/employees/toggle/<int:eid>", methods=["POST"])
+@app.route(
+    "/employees/toggle/<int:eid>",
+    methods=["POST"]
+)
 @login_required
 @admin_required
 def toggle_employee(eid):
     if eid == session["uid"]:
-        flash("لا يمكنك تعطيل حسابك الحالي.", "error")
+        flash(
+            "لا يمكنك تعطيل حسابك الحالي.",
+            "error"
+        )
     else:
         connection = db()
+
         connection.execute(
             """
             UPDATE employees
             SET active=1-active
             WHERE id=?
             """,
-            (eid,),
+            (eid,)
         )
+
         connection.commit()
         connection.close()
+
     return redirect(url_for("employees"))
 
 
@@ -810,11 +904,16 @@ def hotels():
                 request.form["name"].strip(),
                 request.form.get("city", "").strip(),
                 request.form.get("phone", "").strip(),
-                request.form.get("notes", "").strip(),
-            ),
+                request.form.get("notes", "").strip()
+            )
         )
+
         connection.commit()
-        flash("تمت إضافة الفندق.", "ok")
+
+        flash(
+            "تمت إضافة الفندق.",
+            "ok"
+        )
 
     rows = connection.execute(
         """
@@ -829,8 +928,13 @@ def hotels():
         ORDER BY h.id DESC
         """
     ).fetchall()
+
     connection.close()
-    return render_template("hotels.html", hotels=rows)
+
+    return render_template(
+        "hotels.html",
+        hotels=rows
+    )
 
 
 def get_room_status(room_id, today, bookings):
@@ -840,8 +944,10 @@ def get_room_status(room_id, today, bookings):
 
         if booking["checkin"] <= today < booking["checkout"]:
             return "occupied"
+
         if booking["checkout"] == today:
             return "checkout_today"
+
         if booking["checkin"] > today:
             return "upcoming"
 
@@ -852,26 +958,59 @@ def get_room_status(room_id, today, bookings):
 @login_required
 def rooms():
     connection = db()
+
     today = date.today().isoformat()
-    selected_hotel = request.args.get("hotel_id", "")
+    selected_hotel = request.args.get(
+        "hotel_id", ""
+    )
 
     if request.method == "POST":
-        action = request.form.get("action", "single")
-        hotel_id = request.form.get("hotel_id", "").strip()
-        room_type = request.form.get("room_type", "").strip()
-        status = request.form.get("status", "available")
+        action = request.form.get(
+            "action", "single"
+        )
+
+        hotel_id = request.form.get(
+            "hotel_id", ""
+        ).strip()
+
+        room_type = request.form.get(
+            "room_type", ""
+        ).strip()
+
+        status = request.form.get(
+            "status", "available"
+        )
 
         if action == "bulk":
             try:
-                start = int(request.form["start_number"])
-                end = int(request.form["end_number"])
-                price = float(request.form.get("price", "0") or 0)
+                start = int(
+                    request.form["start_number"]
+                )
 
-                if (end < start or start < 0 or end - start > 500 or price < 0 or not hotel_id):
+                end = int(
+                    request.form["end_number"]
+                )
+
+                price = float(
+                    request.form.get(
+                        "price", "0"
+                    ) or 0
+                )
+
+                if (
+                    end < start
+                    or end - start > 1000
+                    or price < 0
+                    or not hotel_id
+                ):
                     raise ValueError
 
                 created = 0
-                for number in range(start, end + 1):
+
+                for number in range(
+                    start,
+                    end + 1
+                ):
                     try:
                         connection.execute(
                             """
@@ -889,25 +1028,56 @@ def rooms():
                                 str(number),
                                 room_type,
                                 price,
-                                status,
-                            ),
+                                status
+                            )
                         )
+
                         created += 1
+
                     except sqlite3.IntegrityError:
                         pass
 
                 connection.commit()
-                flash(f"تم إنشاء {created} غرفة بنجاح.", "ok")
-            except (ValueError, TypeError):
-                flash("بيانات نطاق الغرف غير صحيحة.", "error")
+
+                flash(
+                    f"تم إنشاء {created} غرفة بنجاح.",
+                    "ok"
+                )
+
+            except (
+                ValueError,
+                TypeError
+            ):
+                flash(
+                    "بيانات نطاق الغرف غير صحيحة.",
+                    "error"
+                )
 
             connection.close()
-            return redirect(url_for("rooms", hotel_id=hotel_id))
 
-        number = request.form.get("number", "").strip()
+            return redirect(
+                url_for(
+                    "rooms",
+                    hotel_id=hotel_id
+                )
+            )
+
+        number = request.form.get(
+            "number", ""
+        ).strip()
+
         try:
-            price = float(request.form.get("price", "0") or 0)
-            if (not hotel_id or not number or price < 0):
+            price = float(
+                request.form.get(
+                    "price", "0"
+                ) or 0
+            )
+
+            if (
+                not hotel_id
+                or not number
+                or price < 0
+            ):
                 raise ValueError
 
             connection.execute(
@@ -926,16 +1096,35 @@ def rooms():
                     number,
                     room_type,
                     price,
-                    status,
-                ),
+                    status
+                )
             )
+
             connection.commit()
-            flash("تمت إضافة الغرفة بنجاح.", "ok")
-        except (ValueError, sqlite3.IntegrityError):
-            flash("تعذر إضافة الغرفة. تأكد من البيانات ورقم الغرفة.", "error")
+
+            flash(
+                "تمت إضافة الغرفة بنجاح.",
+                "ok"
+            )
+
+        except (
+            ValueError,
+            sqlite3.IntegrityError
+        ):
+            flash(
+                "تعذر إضافة الغرفة. "
+                "تأكد من البيانات ورقم الغرفة.",
+                "error"
+            )
 
         connection.close()
-        return redirect(url_for("rooms", hotel_id=hotel_id))
+
+        return redirect(
+            url_for(
+                "rooms",
+                hotel_id=hotel_id
+            )
+        )
 
     hotels_list = connection.execute(
         """
@@ -946,62 +1135,588 @@ def rooms():
         """
     ).fetchall()
 
-    query = """
-        SELECT r.*, h.name AS hotel_name
-        FROM rooms r
-        JOIN hotels h ON h.id=r.hotel_id
-    """
-    params = []
-    if selected_hotel:
-        query += " WHERE r.hotel_id=?"
-        params.append(selected_hotel)
-    query += " ORDER BY h.name, r.number"
-
-    rooms_list = connection.execute(query, params).fetchall()
-
-    bookings = connection.execute(
+    room_rows = connection.execute(
         """
-        SELECT room_id, checkin, checkout
-        FROM bookings
-        WHERE status='confirmed'
-          AND checkout >= ?
-        ORDER BY checkin
+        SELECT
+            r.*, 
+            h.name AS hotel_name
+        FROM rooms r
+        JOIN hotels h
+            ON h.id=r.hotel_id
+        WHERE (?='' OR r.hotel_id=? )
+        ORDER BY h.name,r.number
         """,
-        (today,),
+        (
+            selected_hotel,
+            selected_hotel
+        )
     ).fetchall()
 
-    group_bookings = connection.execute(
+    booking_rows = connection.execute(
         """
-        SELECT gbr.room_id, gb.checkin, gb.checkout
+        SELECT
+            room_id,
+            checkin,
+            checkout,
+            status
+        FROM bookings
+        WHERE checkout>=?
+        AND status='confirmed'
+        """,
+        (today,)
+    ).fetchall()
+
+    group_rows = connection.execute(
+        """
+        SELECT
+            gbr.room_id,
+            gb.checkin,
+            gb.checkout,
+            gb.status
         FROM group_booking_rooms gbr
         JOIN group_bookings gb
-          ON gb.id=gbr.group_booking_id
-        WHERE gb.status='confirmed'
-          AND gb.checkout >= ?
-        ORDER BY gb.checkin
+            ON gb.id=gbr.group_booking_id
+        WHERE gb.checkout>=?
+        AND gb.status='confirmed'
         """,
-        (today,),
+        (today,)
     ).fetchall()
 
-    all_bookings = list(bookings) + list(group_bookings)
-    room_rows = []
-    for room in rooms_list:
+    all_bookings = [
+        dict(row)
+        for row in booking_rows
+    ] + [
+        dict(row)
+        for row in group_rows
+    ]
+
+    room_list = []
+
+    for room in room_rows:
         item = dict(room)
-        stored_status = item.get("status", "available")
-        if stored_status in ("available", "booked"):
-            item["display_status"] = get_room_status(room["id"], today, all_bookings)
-        else:
-            item["display_status"] = stored_status
-        room_rows.append(item)
+
+        item["room_status"] = item["status"]
+
+        if item["status"] == "available":
+            item["room_status"] = get_room_status(
+                item["id"],
+                today,
+                all_bookings
+            )
+
+        room_list.append(item)
+
+    counts = {
+        "total": len(room_list),
+        "vacant": sum(
+            x["room_status"] == "vacant"
+            for x in room_list
+        ),
+        "occupied": sum(
+            x["room_status"] == "occupied"
+            for x in room_list
+        ),
+        "checkout_today": sum(
+            x["room_status"] == "checkout_today"
+            for x in room_list
+        ),
+        "upcoming": sum(
+            x["room_status"] == "upcoming"
+            for x in room_list
+        ),
+        "maintenance": sum(
+            x["room_status"] == "maintenance"
+            for x in room_list
+        ),
+        "out_of_service": sum(
+            x["room_status"] == "out_of_service"
+            for x in room_list
+        ),
+        "cleaning": sum(
+            x["room_status"] == "cleaning"
+            for x in room_list
+        )
+    }
 
     connection.close()
+
     return render_template(
         "rooms.html",
-        rooms=room_rows,
         hotels=hotels_list,
+        rooms=room_list,
+        counts=counts,
         selected_hotel=selected_hotel,
+        today=today
     )
 
 
-if __name__ == "__main__":
-    app.run(debug=True)
+@app.route(
+    "/rooms/status/<int:rid>",
+    methods=["POST"]
+)
+@login_required
+def room_status(rid):
+    status = request.form.get(
+        "status",
+        "available"
+    )
+
+    allowed = {
+        "available",
+        "maintenance",
+        "out_of_service",
+        "cleaning"
+    }
+
+    if status not in allowed:
+        flash(
+            "حالة الغرفة غير صحيحة.",
+            "error"
+        )
+
+        return redirect(
+            url_for("rooms")
+        )
+
+    connection = db()
+
+    connection.execute(
+        """
+        UPDATE rooms
+        SET status=?
+        WHERE id=?
+        """,
+        (status, rid)
+    )
+
+    connection.commit()
+    connection.close()
+
+    flash(
+        "تم تحديث حالة الغرفة.",
+        "ok"
+    )
+
+    return redirect(
+        url_for("rooms")
+    )
+
+
+@app.route(
+    "/bookings",
+    methods=["GET", "POST"]
+)
+@login_required
+def bookings():
+    connection = db()
+
+    if request.method == "POST":
+        name = request.form.get(
+            "customer", ""
+        ).strip()
+
+        phone = request.form.get(
+            "phone", ""
+        ).strip()
+
+        hotel_id = request.form.get(
+            "hotel_id"
+        )
+
+        room_id = request.form.get(
+            "room_id"
+        )
+
+        checkin = request.form.get(
+            "checkin", ""
+        )
+
+        checkout = request.form.get(
+            "checkout", ""
+        )
+
+        try:
+            ci = datetime.fromisoformat(
+                checkin
+            )
+
+            co = datetime.fromisoformat(
+                checkout
+            )
+
+            nights = (
+                co - ci
+            ).days
+
+            if nights <= 0:
+                raise ValueError
+
+        except ValueError:
+            connection.close()
+
+            flash(
+                "تاريخ الخروج يجب أن يكون "
+                "بعد تاريخ الدخول.",
+                "error"
+            )
+
+            return redirect(
+                url_for("bookings")
+            )
+
+        room = connection.execute(
+            """
+            SELECT *
+            FROM rooms
+            WHERE id=?
+            AND hotel_id=?
+            """,
+            (
+                room_id,
+                hotel_id
+            )
+        ).fetchone()
+
+        if not room:
+            connection.close()
+
+            flash(
+                "الغرفة غير موجودة في الفندق المحدد.",
+                "error"
+            )
+
+            return redirect(
+                url_for("bookings")
+            )
+
+        if room["status"] in {
+            "maintenance",
+            "out_of_service",
+            "cleaning"
+        }:
+            connection.close()
+
+            flash(
+                "الغرفة غير متاحة بسبب حالتها الحالية.",
+                "error"
+            )
+
+            return redirect(
+                url_for("bookings")
+            )
+
+        if (
+            room_conflict(
+                connection,
+                room_id,
+                checkin,
+                checkout
+            )
+            or group_room_conflict(
+                connection,
+                room_id,
+                checkin,
+                checkout
+            )
+        ):
+            connection.close()
+
+            flash(
+                "هذه الغرفة محجوزة في الفترة "
+                "المحددة. اختر غرفة أو تاريخًا آخر.",
+                "error"
+            )
+
+            return redirect(
+                url_for("bookings")
+            )
+
+        customer = connection.execute(
+            """
+            SELECT id
+            FROM customers
+            WHERE phone=?
+            AND phone!=''
+            """,
+            (phone,)
+        ).fetchone()
+
+        if customer:
+            customer_id = customer["id"]
+
+            connection.execute(
+                """
+                UPDATE customers
+                SET name=?
+                WHERE id=?
+                """,
+                (
+                    name,
+                    customer_id
+                )
+            )
+
+        else:
+            cursor = connection.execute(
+                """
+                INSERT INTO customers(
+                    name,
+                    phone,
+                    notes,
+                    created_at
+                )
+                VALUES(?,?,?,?)
+                """,
+                (
+                    name,
+                    phone,
+                    "",
+                    datetime.now().isoformat()
+                )
+            )
+
+            customer_id = cursor.lastrowid
+
+        price = (
+            float(room["price"])
+            * nights
+        )
+
+        paid = max(
+            0,
+            float(
+                request.form.get(
+                    "paid", "0"
+                ) or 0
+            )
+        )
+
+        paid = min(
+            paid,
+            price
+        )
+
+        code = (
+            "BK-"
+            + secrets.token_hex(3).upper()
+        )
+
+        payment_method = request.form.get(
+            "payment_method",
+            "cash"
+        )
+
+        payment_url = request.form.get(
+            "payment_url",
+            ""
+        ).strip()
+
+        cursor = connection.execute(
+            """
+            INSERT INTO bookings(
+                code,
+                customer_id,
+                hotel_id,
+                room_id,
+                checkin,
+                checkout,
+                nights,
+                price,
+                paid,
+                status,
+                created_by,
+                created_at,
+                payment_method,
+                payment_url
+            )
+            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            """,
+            (
+                code,
+                customer_id,
+                hotel_id,
+                room_id,
+                checkin,
+                checkout,
+                nights,
+                price,
+                paid,
+                "confirmed",
+                session["uid"],
+                datetime.now().isoformat(),
+                payment_method,
+                payment_url
+            )
+        )
+
+        booking_id = cursor.lastrowid
+
+        connection.execute(
+            """
+            UPDATE rooms
+            SET status='booked'
+            WHERE id=?
+            """,
+            (room_id,)
+        )
+
+        if paid > 0:
+            connection.execute(
+                """
+                INSERT INTO payments(
+                    booking_id,
+                    amount,
+                    method,
+                    payment_url,
+                    status,
+                    created_at,
+                    created_by
+                )
+                VALUES(?,?,?,?,?,?,?)
+                """,
+                (
+                    booking_id,
+                    paid,
+                    payment_method,
+                    payment_url,
+                    "paid",
+                    datetime.now().isoformat(),
+                    session["uid"]
+                )
+            )
+
+        connection.commit()
+        connection.close()
+
+        flash(
+            f"تم إنشاء الحجز {code}.",
+            "ok"
+        )
+
+        return redirect(
+            url_for("bookings")
+        )
+
+    rows = connection.execute(
+        """
+        SELECT
+            b.*,
+            cu.name AS customer,
+            cu.phone AS customer_phone,
+            h.name AS hotel,
+            r.number AS room,
+            r.room_type AS room_type
+        FROM bookings b
+        JOIN customers cu
+            ON cu.id=b.customer_id
+        JOIN hotels h
+            ON h.id=b.hotel_id
+        JOIN rooms r
+            ON r.id=b.room_id
+        ORDER BY b.id DESC
+        """
+    ).fetchall()
+
+    hotels_list = connection.execute(
+        """
+        SELECT *
+        FROM hotels
+        WHERE active=1
+        ORDER BY name
+        """
+    ).fetchall()
+
+    rooms_list = connection.execute(
+        """
+        SELECT *
+        FROM rooms
+        WHERE status NOT IN(
+            'maintenance',
+            'out_of_service',
+            'cleaning'
+        )
+        ORDER BY hotel_id,number
+        """
+    ).fetchall()
+
+    connection.close()
+
+    return render_template(
+        "bookings.html",
+        bookings=rows,
+        hotels=hotels_list,
+        rooms=rooms_list
+    )
+
+
+@app.route(
+    "/bookings/cancel/<int:bid>",
+    methods=["POST"]
+)
+@login_required
+def cancel_booking(bid):
+    connection = db()
+
+    booking = connection.execute(
+        """
+        SELECT *
+        FROM bookings
+        WHERE id=?
+        """,
+        (bid,)
+    ).fetchone()
+
+    if not booking:
+        connection.close()
+
+        flash(
+            "الحجز غير موجود.",
+            "error"
+        )
+
+        return redirect(
+            url_for("bookings")
+        )
+
+    if booking["status"] == "cancelled":
+        connection.close()
+
+        flash(
+            "الحجز ملغى بالفعل.",
+            "error"
+        )
+
+        return redirect(
+            url_for("bookings")
+        )
+
+    connection.execute(
+        """
+        UPDATE bookings
+        SET status='cancelled'
+        WHERE id=?
+        """,
+        (bid,)
+    )
+
+    connection.execute(
+        """
+        UPDATE rooms
+        SET status='available'
+        WHERE id=?
+        AND status='booked'
+        """,
+        (booking["room_id"],)
+    )
+
+    connection.commit()
+    connection.close()
+
+    flash(
+        "تم إلغاء الحجز وإتاحة الغرفة.",
+        "ok"
+    )
+
+    return redirect(
+        url_for("bookings")
+    )
