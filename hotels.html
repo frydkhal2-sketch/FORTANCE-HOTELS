@@ -1,91 +1,239 @@
-
+```html
 {% extends "base.html" %}
 
 {% block title %}إدارة الفنادق | FORTANCE HOTELS{% endblock %}
 
 {% block content %}
 
-<div class="top">
-    <div>
-        <h1>🏨 الفنادق</h1>
-        <div class="muted">أضف وأدر الفنادق التي تتوفر فيها الغرف.</div>
-    </div>
-</div>
+<style>
+.hotels-page {
+    direction: rtl;
+}
 
-<div class="panel">
-    <h2>إضافة فندق</h2>
+.hotels-page .page-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+}
 
-    <form method="post" class="form">
-        <label>
-            اسم الفندق
-            <input name="name" required>
-        </label>
+.hotels-page .muted {
+    color: #718096;
+    margin-top: 6px;
+}
 
-        <label>
-            المدينة
-            <input name="city">
-        </label>
+.hotels-page .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 16px;
+}
 
-        <label>
-            الهاتف
-            <input name="phone">
-        </label>
+.hotels-page .field {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
 
-        <label>
-            ملاحظات
-            <input name="notes">
-        </label>
+.hotels-page input,
+.hotels-page textarea {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #dce3ed;
+    border-radius: 9px;
+    padding: 11px 12px;
+    font: inherit;
+    background: #fff;
+}
 
+.hotels-page input:focus,
+.hotels-page textarea:focus {
+    outline: 2px solid #e7d29a;
+    border-color: #c9a34d;
+}
+
+.hotels-page .table-wrap {
+    overflow-x: auto;
+}
+
+.hotels-page table {
+    width: 100%;
+    min-width: 560px;
+    border-collapse: collapse;
+}
+
+.hotels-page th,
+.hotels-page td {
+    padding: 13px 12px;
+    text-align: right;
+    border-bottom: 1px solid #edf0f5;
+}
+
+.hotels-page th {
+    background: #f4f7fb;
+    color: #4c5b70;
+    white-space: nowrap;
+}
+
+.hotels-page .hotel-name {
+    font-weight: 700;
+}
+
+.hotels-page .room-count {
+    display: inline-block;
+    min-width: 30px;
+    text-align: center;
+    padding: 5px 9px;
+    border-radius: 20px;
+    background: #edf5ff;
+    color: #245a91;
+}
+
+.hotels-page .empty-state {
+    text-align: center;
+    padding: 26px 12px;
+    color: #718096;
+}
+
+.hotels-page .actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 18px;
+}
+
+@media (max-width: 600px) {
+    .hotels-page .panel {
+        padding: 14px;
+    }
+}
+</style>
+
+<div class="hotels-page">
+
+    <div class="page-head">
         <div>
-            <button type="submit" class="btn primary">حفظ الفندق</button>
+            <h1>🏨 إدارة الفنادق</h1>
+            <p class="muted">
+                أضف الفنادق وتابع عدد الغرف المسجلة في كل فندق.
+            </p>
         </div>
-    </form>
-</div>
-
-<div class="panel">
-    <h2>قائمة الفنادق</h2>
-
-    <div style="overflow-x:auto">
-        <table>
-            <thead>
-                <tr>
-                    <th>الفندق</th>
-                    <th>المدينة</th>
-                    <th>الهاتف</th>
-                    <th>الغرف</th>
-                    <th>الإجراء</th>
-                </tr>
-            </thead>
-
-            <tbody>
-                {% for h in hotels %}
-                <tr>
-                    <td>{{ h.name }}</td>
-                    <td>{{ h.city or '—' }}</td>
-                    <td>{{ h.phone or '—' }}</td>
-                    <td>{{ h.rooms }}</td>
-                    <td>
-                        <form method="post"
-                              action="{{ url_for('deactivate_hotel', hotel_id=h.id) }}"
-                              onsubmit="return confirm('هل تريد إزالة هذا الفندق من قائمة الفنادق؟ ستبقى البيانات القديمة محفوظة.');">
-                            <button type="submit"
-                                    class="btn"
-                                    style="background:#fee2e2;color:#991b1b">
-                                إزالة الفندق
-                            </button>
-                        </form>
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="5" style="text-align:center;padding:24px">
-                        لا توجد فنادق مسجلة.
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
     </div>
+
+    <div class="panel">
+        <h2>➕ إضافة فندق جديد</h2>
+
+        <form method="post" action="{{ url_for('hotels') }}">
+            <div class="form-grid">
+
+                <div class="field">
+                    <label for="hotel-name">اسم الفندق *</label>
+                    <input
+                        id="hotel-name"
+                        type="text"
+                        name="name"
+                        maxlength="150"
+                        required
+                        placeholder="أدخل اسم الفندق">
+                </div>
+
+                <div class="field">
+                    <label for="hotel-city">المدينة</label>
+                    <input
+                        id="hotel-city"
+                        type="text"
+                        name="city"
+                        maxlength="100"
+                        placeholder="مثال: مكة المكرمة">
+                </div>
+
+                <div class="field">
+                    <label for="hotel-phone">رقم الهاتف</label>
+                    <input
+                        id="hotel-phone"
+                        type="tel"
+                        name="phone"
+                        maxlength="40"
+                        placeholder="رقم التواصل">
+                </div>
+
+                <div class="field">
+                    <label for="hotel-notes">ملاحظات</label>
+                    <textarea
+                        id="hotel-notes"
+                        name="notes"
+                        rows="2"
+                        maxlength="1000"
+                        placeholder="ملاحظات إضافية (اختياري)"></textarea>
+                </div>
+
+            </div>
+
+            <div class="actions">
+                <button type="submit" class="btn primary">
+                    💾 حفظ الفندق
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="panel">
+        <h2>📋 قائمة الفنادق</h2>
+        <p class="muted">
+            بيانات الفنادق محفوظة في قاعدة البيانات الحالية.
+        </p>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>الفندق</th>
+                        <th>المدينة</th>
+                        <th>الهاتف</th>
+                        <th>عدد الغرف</th>
+                        <th>إدارة الغرف</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for h in hotels %}
+                    <tr>
+                        <td class="hotel-name">
+                            {{ h.name }}
+                        </td>
+
+                        <td>{{ h.city or '—' }}</td>
+
+                        <td>{{ h.phone or '—' }}</td>
+
+                        <td>
+                            <span class="room-count">
+                                {{ h.rooms or 0 }}
+                            </span>
+                        </td>
+
+                        <td>
+                            <a
+                                class="btn"
+                                href="{{ url_for('rooms', hotel_id=h.id) }}">
+                                🛏️ عرض الغرف
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="empty-state">
+                            لا توجد فنادق مسجلة حتى الآن.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
 </div>
 
 {% endblock %}
+```
