@@ -1282,7 +1282,7 @@ def room_status(rid):
         url_for("rooms")
     )
 
-```python
+
 @app.route(
     "/bookings",
     methods=["GET", "POST"]
@@ -1292,40 +1292,44 @@ def bookings():
     connection = db()
 
     if request.method == "POST":
+        # Accept both field names used by the booking templates.
         name = request.form.get(
-            "name",
-            request.form.get("customer", "")
+            "name", request.form.get("customer", "")
+        ).strip()
+
+        phone = request.form.get(
+            "phone", ""
         ).strip()
 
         if not name:
             connection.close()
-            flash("يرجى إدخال اسم النزيل.", "error")
+            flash("يرجى إدخال اسم العميل.", "error")
             return redirect(url_for("bookings"))
 
-        phone = request.form.get(
-            "phone", ""
-        ).strip()
+        hotel_id = request.form.get(
+            "hotel_id", request.form.get("hotel", "")
+        )
 
-        hotel_id = request.form.get("hotel_id")
+        room_id = request.form.get(
+            "room_id", request.form.get("room", "")
+        )
 
-        room_id = request.form.get("room_id")
-```
+        checkin = request.form.get(
+            "checkin", ""
+        )
 
-
-        phone = request.form.get(
-            "phone", ""
-        ).strip()
-
-        hotel_id = request.form.get( "hotel_id"  )
-        room_id = request.form.get( "room_id" )
-
-
-        checkin = request.form.get(  "checkin", "" )
-        checkout = request.form.get( "checkout", "" )
+        checkout = request.form.get(
+            "checkout", ""
+        )
 
         try:
-            ci = datetime.fromisoformat(checkin )
-            co = datetime.fromisoformat(checkout)
+            ci = datetime.fromisoformat(
+                checkin
+            )
+
+            co = datetime.fromisoformat(
+                checkout
+            )
 
             nights = (
                 co - ci
@@ -2794,4 +2798,3 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=int(os.environ.get("PORT", "5000"))
     )
-<full file content>
