@@ -227,7 +227,20 @@ def init_db():
         );
         """
     )
-
+    connection.execute("""
+        CREATE TABLE IF NOT EXISTS expenses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            hotel_id INTEGER,
+            expense_date TEXT NOT NULL,
+            category TEXT NOT NULL,
+            description TEXT,
+            amount REAL NOT NULL DEFAULT 0,
+            payment_method TEXT DEFAULT 'cash',
+            created_at TEXT NOT NULL,
+            created_by INTEGER
+        )
+    """)
+    
     # إضافة أعمدة جديدة للقاعدة الحالية بدون حذف البيانات القديمة.
     ensure_column(
         connection, "bookings", "payment_method",
