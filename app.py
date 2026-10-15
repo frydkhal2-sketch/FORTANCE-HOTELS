@@ -1311,42 +1311,21 @@ def bookings():
         room_id = request.form.get("room_id")
 ```
 
-    
-
-if request.method == "POST":
-        name = request.form.get(
-            "customer", ""
-        ).strip()
 
         phone = request.form.get(
             "phone", ""
         ).strip()
 
-        hotel_id = request.form.get(
-            "hotel_id"
-        )
-    
+        hotel_id = request.form.get( "hotel_id"  )
+        room_id = request.form.get( "room_id" )
 
-        room_id = request.form.get(
-            "room_id"
-        )
 
-        checkin = request.form.get(
-            "checkin", ""
-        )
-
-        checkout = request.form.get(
-            "checkout", ""
-        )
+        checkin = request.form.get(  "checkin", "" )
+        checkout = request.form.get( "checkout", "" )
 
         try:
-            ci = datetime.fromisoformat(
-                checkin
-            )
-
-            co = datetime.fromisoformat(
-                checkout
-            )
+            ci = datetime.fromisoformat(checkin )
+            co = datetime.fromisoformat(checkout)
 
             nights = (
                 co - ci
