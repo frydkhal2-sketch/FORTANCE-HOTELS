@@ -2479,6 +2479,7 @@ def moyasar_return():
         flash("تعذر التحقق من الدفع الآن. حاول تحديث الحجوزات لاحقاً.", "error")
 
     finally:
+        
         connection.close()
 
     return redirect(url_for("bookings"))
@@ -2492,9 +2493,9 @@ connection.execute("""
         amount REAL NOT NULL DEFAULT 0,
         payment_method TEXT DEFAULT 'cash',
         created_at TEXT NOT NULL,
-        created_by INTEGER
-    )
-""")
+        created_by INTEGER )
+        """)
+
 
 # Initialize the database when the application module loads.
 # Keep existing tables and records; do not delete the database.
