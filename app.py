@@ -1282,7 +1282,7 @@ def room_status(rid):
         url_for("rooms")
     )
 
-
+```python
 @app.route(
     "/bookings",
     methods=["GET", "POST"]
@@ -1290,6 +1290,27 @@ def room_status(rid):
 @login_required
 def bookings():
     connection = db()
+
+    if request.method == "POST":
+        name = request.form.get(
+            "name",
+            request.form.get("customer", "")
+        ).strip()
+
+        if not name:
+            connection.close()
+            flash("يرجى إدخال اسم النزيل.", "error")
+            return redirect(url_for("bookings"))
+
+        phone = request.form.get(
+            "phone", ""
+        ).strip()
+
+        hotel_id = request.form.get("hotel_id")
+
+        room_id = request.form.get("room_id")
+```
+
     
 
 if request.method == "POST":
