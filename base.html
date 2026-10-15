@@ -1,11 +1,11 @@
+```html
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#071426">
 
-    <title>{% block title %}{{ settings.get('company_name', 'FORTANCE HOTELS') }}{% endblock %}</title>
+    <title>{% block title %}FORTANCE HOTELS{% endblock %}</title>
 
     <link rel="stylesheet"
           href="{{ url_for('static', filename='style.css') }}">
@@ -17,14 +17,15 @@
 <div class="layout">
 
     <aside class="side">
+
         <div class="brand">
             <img
                 src="{{ url_for('static', filename='logo.jpg') }}"
-                alt="شعار {{ settings.get('company_name', 'FORTANCE HOTELS') }}"
+                alt="شعار FORTANCE HOTELS"
                 onerror="this.style.display='none';"
             >
 
-            <div class="brand-name">{{ settings.get('company_name', 'FORTANCE HOTELS') }}</div>
+            <div class="brand-name">FORTANCE HOTELS</div>
             <div class="brand-subtitle">إدارة الضيافة الفندقية</div>
         </div>
 
@@ -35,6 +36,8 @@
                 {{ user_name or 'المستخدم' }}
             </strong>
 
+            <br>
+
             <span class="user-role">
                 {{ ROLES.get(user_role, user_role or 'مستخدم') }}
             </span>
@@ -43,86 +46,71 @@
         <div class="menu-title">القائمة الرئيسية</div>
 
         <nav class="menu">
-            <a href="/dashboard"
+
+            <a href="{{ url_for('dashboard') }}"
                class="{% if request.path == '/dashboard' %}active{% endif %}">
-                <span class="menu-icon">🏠</span>
-                <span>الرئيسية</span>
+                <span>🏠</span><span>الرئيسية</span>
             </a>
 
-            <a href="/hotels"
+            <a href="{{ url_for('hotels') }}"
                class="{% if request.path.startswith('/hotels') %}active{% endif %}">
-                <span class="menu-icon">🏨</span>
-                <span>الفنادق</span>
+                <span>🏨</span><span>الفنادق</span>
             </a>
 
-            <a href="/rooms"
+            <a href="{{ url_for('rooms') }}"
                class="{% if request.path.startswith('/rooms') %}active{% endif %}">
-                <span class="menu-icon">🛏️</span>
-                <span>الغرف</span>
+                <span>🛏️</span><span>الغرف</span>
             </a>
 
-            <a href="/bookings"
+            <a href="{{ url_for('bookings') }}"
                class="{% if request.path.startswith('/bookings') %}active{% endif %}">
-                <span class="menu-icon">📅</span>
-                <span>الحجوزات</span>
+                <span>📅</span><span>الحجوزات</span>
             </a>
 
             <a href="/group-bookings"
-               class="{% if request.path.startswith('/group-bookings') or request.path.startswith('/group_bookings') %}active{% endif %}">
-                <span class="menu-icon">👥</span>
-                <span>حجوزات المجموعات</span>
+               class="{% if request.path.startswith('/group-bookings') %}active{% endif %}">
+                <span>👥</span><span>حجوزات المجموعات</span>
             </a>
 
             <a href="/companies"
                class="{% if request.path.startswith('/companies') %}active{% endif %}">
-                <span class="menu-icon">🏢</span>
-                <span>الشركات</span>
+                <span>🏢</span><span>الشركات</span>
             </a>
 
             {% if user_role == 'admin' %}
+
             <a href="/employees"
                class="{% if request.path.startswith('/employees') %}active{% endif %}">
-                <span class="menu-icon">👤</span>
-                <span>الموظفون</span>
+                <span>👤</span><span>الموظفون</span>
             </a>
 
             <a href="/settings"
                class="{% if request.path.startswith('/settings') %}active{% endif %}">
-                <span class="menu-icon">⚙️</span>
-                <span>إعدادات النظام</span>
+                <span>⚙️</span><span>إعدادات النظام</span>
             </a>
+
             {% endif %}
 
             <a href="/seasons"
                class="{% if request.path.startswith('/seasons') %}active{% endif %}">
-                <span class="menu-icon">🗓️</span>
-                <span>الإجازات والمواسم</span>
+                <span>🗓️</span><span>الإجازات والمواسم</span>
             </a>
 
             <a href="/reports"
                class="{% if request.path.startswith('/reports') %}active{% endif %}">
-                <span class="menu-icon">📊</span>
-                <span>التقارير</span>
+                <span>📊</span><span>التقارير</span>
             </a>
 
-            {# الفواتير تظهر للمسؤول والمحاسب (قابلة للتعديل حسب رغبتك) #}
-            {% if user_role in ['admin', 'accountant'] %}
-            <a href="/invoices"
-               class="{% if request.path.startswith('/invoices') %}active{% endif %}">
-                <span class="menu-icon">🧾</span>
-                <span>الفواتير</span>
+            <a href="{{ url_for('logout') }}" class="logout">
+                <span>🚪</span><span>تسجيل الخروج</span>
             </a>
-            {% endif %}
 
-            <a href="/logout" class="logout">
-                <span class="menu-icon">🚪</span>
-                <span>تسجيل الخروج</span>
-            </a>
         </nav>
     </aside>
 
     <main class="main">
-        <header class="topbar">
+
+        <div class="topbar">
             <div>
                 <h2 class="topbar-title">
                     {% block page_title %}نظام إدارة الفنادق{% endblock %}
@@ -133,26 +121,27 @@
                 </div>
             </div>
 
-            <div class="company-label">{{ settings.get('company_name', 'FORTANCE HOTELS') }}</div>
-        </header>
+            <div class="company-label">FORTANCE HOTELS</div>
+        </div>
 
-        <section class="flash-area" aria-live="polite">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% for cat, msg in messages %}
-                    <div class="flash {{ cat }}" role="status">
-                        {{ msg }}
-                    </div>
-                {% endfor %}
-            {% endwith %}
-        </section>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for cat, msg in messages %}
+                <div class="flash {{ cat }}" role="status">
+                    {{ msg }}
+                </div>
+            {% endfor %}
+        {% endwith %}
 
         <div class="content-area">
             {% block content %}{% endblock %}
         </div>
+
     </main>
 
 </div>
 
 {% block extra_scripts %}{% endblock %}
+
 </body>
 </html>
+```
