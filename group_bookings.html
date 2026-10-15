@@ -239,7 +239,16 @@
     </div>
 
     <div class="panel">
-        <h2>➕ إنشاء حجز مجموعة جديد</h2>
+        
+<div class="form-heading">
+    <h2>إنشاء حجز مجموعة جديد</h2>
+    <button type="button"
+            class="toggle-form-btn"
+            id="toggle-group-form"
+            aria-expanded="true">
+        − إخفاء النموذج
+    </button>
+</div>
 
         {% if hotels and rooms %}
         <form
@@ -684,6 +693,23 @@
     });
 
     updateRoomAvailability();
+
+const toggleGroupButton = document.getElementById("toggle-group-form");
+const groupContainer = document.getElementById("group-form-container");
+
+if (toggleGroupButton && groupContainer) {
+    toggleGroupButton.addEventListener("click", function () {
+        const isVisible = groupContainer.style.display !== "none";
+
+        groupContainer.style.display = isVisible ? "none" : "block";
+        toggleGroupButton.textContent = isVisible
+            ? "+ إنشاء حجز مجموعة جديد"
+            : "− إخفاء النموذج";
+        toggleGroupButton.setAttribute("aria-expanded", String(!isVisible));
+    });
+}
+
+    
 })();
 </script>
 
