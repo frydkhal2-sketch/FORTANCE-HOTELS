@@ -1290,11 +1290,18 @@ def room_status(rid):
 @login_required
 def bookings():
     connection = db()
+    
 
-if request.method == "POST":
-        name = request.form.get(
-            "customer", ""
-        ).strip()
+name = request.form.get(
+    "name",
+    request.form.get("customer", "")
+).strip()
+
+if not name:
+    connection.close()
+    flash("يرجى إدخال اسم النزيل.", "error")
+    return redirect(url_for("bookin
+                            
 
         phone = request.form.get(
             "phone", ""
