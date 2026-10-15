@@ -3,6 +3,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 import sqlite3
 import os
 import hashlib
+import hmac
 import secrets
 import requests
 from functools import wraps
@@ -305,7 +306,7 @@ def init_db():
             ("فندق ريان الجوار", "مكة المكرمة", "")
         )
 
-  # إزالة الغرف التجريبية القديمة مرة واحدة فقط،
+    # إزالة الغرف التجريبية القديمة مرة واحدة فقط،
     # وفقط إذا لم توجد حجوزات حالية مرتبطة بها.
     cleanup = connection.execute(
         """
@@ -523,6 +524,28 @@ def ctx():
         "user_role": session.get("role"),
         "system_settings": get_settings()
     }
+
+
+@app.before_request
+def ensure_valid_session():
+    if "uid" not in session:
+        return None
+
+    connection = db()
+    try:
+        user = connection.execute(
+            "SELECT active FROM employees WHERE id=?",
+            (session["uid"],),
+        ).fetchone()
+    finally:
+        connection.close()
+
+    if user is None or user["active"] != 1:
+        session.clear()
+        flash("تم إلغاء تفعيل حسابك. سجل الدخول مرة أخرى.", "error")
+        return redirect(url_for("login"))
+
+    return None
 
 
 def room_conflict(
@@ -1115,7 +1138,7 @@ def rooms():
     room_rows = connection.execute(
         """
         SELECT
-            r.*,
+            r.*, 
             h.name AS hotel_name
         FROM rooms r
         JOIN hotels h
@@ -2571,6 +2594,26 @@ def create_payment_link(bid):
 
 @app.route("/payments/moyasar/callback", methods=["POST"])
 def moyasar_callback():
+    raw_body = request.get_data(cache=True)
+    secret = os.environ.get("MOYASAR_SECRET_KEY", "").strip()
+
+    if not secret:
+        return jsonify({"error": "missing payment secret"}), 500
+
+    signature = (
+        request.headers.get("X-Moyasar-Signature")
+        or request.headers.get("X-Signature")
+        or ""
+    )
+    expected = hmac.new(
+        secret.encode("utf-8"),
+        raw_body,
+        hashlib.sha256,
+    ).hexdigest()
+
+    if not signature or not hmac.compare_digest(signature.lower(), expected.lower()):
+        return jsonify({"error": "invalid signature"}), 401
+
     data = request.get_json(silent=True) or {}
     invoice_id = data.get("id")
 
@@ -2739,3 +2782,4 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=int(os.environ.get("PORT", "5000"))
     )
+
