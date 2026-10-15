@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>التقرير المالي</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 1100px; margin: auto; }
+        .cards { display: flex; gap: 16px; flex-wrap: wrap; margin: 20px 0; }
+        .card {
+            flex: 1;
+            min-width: 180px;
+            background: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 16px;
+        }
+        .label { color: #666; font-size: 12px; }
+        .value { font-size: 28px; font-weight: bold; margin-top: 8px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
+        th { background: #f2f2f2; }
+        .ok { color: green; font-weight: bold; }
+        .bad { color: red; font-weight: bold; }
+        .filters { margin: 20px 0; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+        input, select, button { padding: 8px 10px; border-radius: 6px; border: 1px solid #ccc; }
+        button { background: #1b7f5a; color: white; border: none; cursor: pointer; }
+        a.btn {
+            display: inline-block;
+            background: #235ea8;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            padding: 8px 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>التقرير الاقتصادي والربحية</h2>
+
+        <form class="filters" method="get" action="{{ url_for('finance') }}">
+            <input type="date" name="start_date" value="{{ start_date }}">
+            <input type="date" name="end_date" value="{{ end_date }}">
+            <select name="hotel_id">
+                <option value="">كل الفنادق</option>
+                {% for hotel in hotels %}
+                    <option value="{{ hotel.id }}" {% if selected_hotel == hotel.id|string %}selected{% endif %}>
+                        {{ hotel.name }}
+                    </option>
+                {% endfor %}
+            </select>
+            <button type="submit">تحديث</button>
+            <a class="btn" href="{{ url_for('export_finance_csv', start_date=start_date, end_date=end_date, hotel_id=selected_hotel) }}">تصدير CSV</a>
+        </form>
+
+        <div class="cards">
+            <div class="card">
+                <div class="label">إجمالي الإيرادات</div>
+                <div class="value">{{ '%.2f'|format(revenue) }} ر.س</div>
+            </div>
+            <div class="card">
+                <div class="label">إجمالي المصروفات</div>
+                <div class="value">{{ '%.2f'|format(expenses) }} ر.س</div>
+            </div>
+            <div class="card">
+                <div class="label">صافي الربح</div>
+                <div class="value {% if profit >= 0 %}ok{% else %}bad{% endif %}">
+                    {{ '%.2f'|format(profit) }} ر.س
+                </div>
+            </div>
+        </div>
+
+        <h3>التفصيل حسب الفندق</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>اسم الفندق</th>
+                    <th>الإيراد</th>
+                    <th>المصروفات</th>
+                    <th>الربح</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in hotel_breakdown %}
+                    <tr>
+                        <td>{{ row.name }}</td>
+                        <td>{{ '%.2f'|format(row.revenue) }}</td>
+                        <td>{{ '%.2f'|format(row.expenses) }}</td>
+                        <td class="{% if row.profit >= 0 %}ok{% else %}bad{% endif %}">
+                            {{ '%.2f'|format(row.profit) }}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <h3>مصروفات حسب الفئة</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>الفئة</th>
+                    <th>المبلغ</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for category in categories %}
+                    <tr>
+                        <td>{{ category.category }}</td>
+                        <td>{{ '%.2f'|format(category.total) }} ر.س</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <p>
+            <a href="{{ url_for('dashboard') }}">عودة للوحة الرئيسية</a>
+        </p>
+    </div>
+</body>
+</html>
