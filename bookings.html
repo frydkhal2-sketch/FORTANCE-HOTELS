@@ -186,10 +186,13 @@
 </div>
 
         {% if hotels and rooms %}
-        <form
-            method="post"
-            action="{{ url_for('bookings') }}"
-            id="booking-form">
+       
+<div id="booking-form-container">
+<form
+    method="post"
+    action="{{ url_for('bookings') }}"
+    id="booking-form">
+
 
             <div class="form-grid">
 
@@ -460,8 +463,11 @@
                                     class="cancel-btn">
                                     إلغاء الحجز
                                 </button>
-                            </form>
-                            {% else %}
+                           
+                             </form>
+                              </div>
+                          {% else %}
+
                             —
                             {% endif %}
                         </td>
@@ -682,6 +688,22 @@
 
         filterBookings();
     }
+    
+const toggleBookingButton = document.getElementById("toggle-booking-form");
+const bookingContainer = document.getElementById("booking-form-container");
+
+if (toggleBookingButton && bookingContainer) {
+    toggleBookingButton.addEventListener("click", function () {
+        const isVisible = bookingContainer.style.display !== "none";
+
+        bookingContainer.style.display = isVisible ? "none" : "block";
+        toggleBookingButton.textContent = isVisible
+            ? "+ إنشاء حجز جديد"
+            : "− إخفاء النموذج";
+        toggleBookingButton.setAttribute("aria-expanded", String(!isVisible));
+    });
+}
+
 })();
 </script>
 
