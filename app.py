@@ -1292,16 +1292,10 @@ def bookings():
     connection = db()
     
 
-name = request.form.get(
-    "name",
-    request.form.get("customer", "")
-).strip()
-
-if not name:
-    connection.close()
-    flash("يرجى إدخال اسم النزيل.", "error")
-    return redirect(url_for("bookin
-                            
+if request.method == "POST":
+        name = request.form.get(
+            "customer", ""
+        ).strip()
 
         phone = request.form.get(
             "phone", ""
@@ -1310,6 +1304,7 @@ if not name:
         hotel_id = request.form.get(
             "hotel_id"
         )
+    
 
         room_id = request.form.get(
             "room_id"
