@@ -225,9 +225,21 @@ def init_db():
             created_at TEXT NOT NULL,
             created_by INTEGER
         );
+
+        CREATE TABLE IF NOT EXISTS expenses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            hotel_id INTEGER,
+            expense_date TEXT NOT NULL,
+            category TEXT NOT NULL,
+            description TEXT,
+            amount REAL NOT NULL DEFAULT 0,
+            payment_method TEXT DEFAULT 'cash',
+            created_at TEXT NOT NULL,
+            created_by INTEGER
+        );
         """
-  
-    
+    )
+
     # إضافة أعمدة جديدة للقاعدة الحالية بدون حذف البيانات القديمة.
     ensure_column(
         connection, "bookings", "payment_method",
@@ -2303,7 +2315,7 @@ def create_payment_link(bid):
     except (RuntimeError, ValueError):
         connection.rollback()
         app.logger.exception("Payment setup error")
-        flash("تعذر إعد��د الدفع. راجع إعدادات النظام.", "error")
+        flash("تعذر إعداد الدفع. راجع إعدادات النظام.", "error")
 
     finally:
         connection.close()
@@ -2466,11 +2478,9 @@ def moyasar_return():
         flash("تعذر التحقق من الدفع الآن. حاول تحديث الحجوزات لاحقاً.", "error")
 
     finally:
-        
         connection.close()
 
     return redirect(url_for("bookings"))
-
 
 
 # Initialize the database when the application module loads.
@@ -2483,5 +2493,3 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=int(os.environ.get("PORT", "5000"))
     )
-
-
