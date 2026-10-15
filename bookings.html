@@ -1,494 +1,680 @@
-
+```html
 {% extends "base.html" %}
 
-{% block title %}إدارة الحجوزات | FORTANCE HOTELS{% endblock %}
+{% block title %}الحجوزات | FORTANCE HOTELS{% endblock %}
 
 {% block content %}
 
 <style>
 .booking-page {
     direction: rtl;
-    color: #172033;
 }
-.booking-header {
+
+.booking-page .page-head {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
     flex-wrap: wrap;
-    gap: 16px;
-    margin-bottom: 24px;}
-.booking-header h1 {
-    margin: 0 0 8px;
-    font-size: 26px;
-    font-weight: 900;
-}
-.booking-header p {
-    margin: 0;
-    color: #718096;
-    line-height: 1.8;
-}
-.booking-actions {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-.booking-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-    gap: 15px;
-    margin-bottom: 24px;
-}
-.booking-card, .booking-panel {
-    background: #fff;
-    border: 1px solid #e5eaf1;
-    border-radius: 16px;
-    box-shadow: 0 5px 20px #1028440a;
-}
-.booking-card {
-    padding: 19px;
-    border-top: 3px solid #d9a83f;
-}
-.card-icon {
-    font-size: 24px;
-    margin-bottom: 12px;
-}
-.card-number {
-    font-size: 25px;
-    font-weight: 900;
-    overflow-wrap: anywhere;
-    margin-bottom: 7px;
-}
-.card-label {
-    color: #718096;
-    font-size: 12px;
-}
-.booking-panel {
-    padding: 23px;
-    margin-bottom: 24px;
-}
-.booking-panel h2 {
-    margin: 0 0 8px;
-    font-size: 20px;
-}
-.panel-description {
-    color: #718096;
-    line-height: 1.8;
+    gap: 12px;
     margin-bottom: 20px;
 }
-.booking-form {
+
+.booking-page .muted {
+    color: #718096;
+    margin-top: 6px;
+}
+
+.booking-page .form-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 17px;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 15px;
 }
-.booking-field label {
-    display: block;
-    font-weight: 700;
-    color: #46546a;
-    margin-bottom: 8px;
-}
-.booking-field input,
-.booking-field select {
-    display: block;
-    width: 100%;
-    min-height: 45px;
-    padding: 10px 12px;
-    border: 1px solid #dbe2ec;
-    border-radius: 10px;
-    background: #fff;
-    font: inherit;
-    box-sizing: border-box;
-}
-.booking-field input:focus,
-.booking-field select:focus {
-    outline: 2px solid #d9a83f55;
-    border-color: #d9a83f;
-}
-.booking-form-actions {
-    grid-column: 1 / -1;
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    margin-top: 4px;
-}
-.booking-table-wrap {
-    width: 100%;
-    overflow-x: auto;
-}
-.booking-table {
-    width: 100%;
-    min-width: 1050px;
-    border-collapse: collapse;
-}
-.booking-table th,
-.booking-table td {
-    text-align: right;
-    padding: 14px 12px;
-    border-bottom: 1px solid #edf0f5;
-    vertical-align: middle;
-}
-.booking-table th {
-    background: #f4f7fb;
-    color: #4c5b70;
-    font-size: 12px;
-    white-space: nowrap;
-}
-.booking-table tbody tr:hover {
-    background: #fafbfd;
-}
-.booking-status {
-    display: inline-block;
-    border-radius: 20px;
-    padding: 6px 10px;
-    font-size: 12px;
-    font-weight: 800;
-    white-space: nowrap;
-}
-.status-paid { background: #dcfce7; color: #166534; }
-.status-partial { background: #fff2cc; color: #8a5b00; }
-.status-unpaid { background: #fee2e2; color: #991b1b; }
-.status-cancelled { background: #e5e7eb; color: #374151; }
-.status-pending { background: #dbeafe; color: #1d4ed8; }
-.booking-money {
-    white-space: nowrap;
-    line-height: 1.8;
-}
-.booking-row-actions {
+
+.booking-page .field {
     display: flex;
     flex-direction: column;
     gap: 7px;
-    min-width: 145px;
 }
-.booking-row-actions .btn,
-.booking-row-actions button {
+
+.booking-page input,
+.booking-page select,
+.booking-page textarea {
     width: 100%;
+    min-width: 0;
     box-sizing: border-box;
-    text-align: center;
-    justify-content: center;
-    font-size: 12px;
-    padding: 9px 10px;
+    padding: 10px 11px;
+    border: 1px solid #dce3ed;
+    border-radius: 8px;
+    background: #fff;
+    font: inherit;
 }
-.booking-payment-form { margin: 0; }
-.booking-note {
-    background: #fff8e6;
-    color: #805b00;
-    border: 1px solid #f3dfaa;
-    padding: 13px 15px;
+
+.booking-page input:focus,
+.booking-page select:focus,
+.booking-page textarea:focus {
+    outline: 2px solid #e7d29a;
+    border-color: #c9a34d;
+}
+
+.booking-page .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.booking-page .summary-item {
+    padding: 14px;
+    border: 1px solid #e5eaf1;
     border-radius: 10px;
-    line-height: 1.8;
-    margin-bottom: 18px;
+    background: #f8fafc;
 }
-.booking-empty {
+
+.booking-page .summary-item small {
+    display: block;
+    color: #64748b;
+    margin-bottom: 7px;
+}
+
+.booking-page .summary-item strong {
+    font-size: 20px;
+}
+
+.booking-page .table-wrap {
+    overflow-x: auto;
+}
+
+.booking-page table {
+    width: 100%;
+    min-width: 1000px;
+    border-collapse: collapse;
+}
+
+.booking-page th,
+.booking-page td {
+    padding: 12px;
+    text-align: right;
+    vertical-align: middle;
+    border-bottom: 1px solid #edf0f5;
+}
+
+.booking-page th {
+    background: #f4f7fb;
+    color: #4c5b70;
+    white-space: nowrap;
+}
+
+.booking-page .status-tag {
+    display: inline-block;
+    padding: 5px 9px;
+    border-radius: 20px;
+    background: #dcfce7;
+    color: #166534;
+    white-space: nowrap;
+}
+
+.booking-page .status-cancelled {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.booking-page .status-pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.booking-page .cancel-btn {
+    padding: 8px 11px;
+    border: 0;
+    border-radius: 7px;
+    color: #991b1b;
+    background: #fee2e2;
+    cursor: pointer;
+    font: inherit;
+}
+
+.booking-page .empty-state {
     text-align: center;
-    padding: 40px 15px;
+    padding: 28px 12px;
     color: #718096;
 }
-.booking-empty .empty-icon {
-    font-size: 42px;
-    margin-bottom: 10px;
+
+.booking-page .form-error {
+    display: none;
+    margin-top: 14px;
+    padding: 11px 13px;
+    color: #991b1b;
+    background: #fee2e2;
+    border-radius: 8px;
 }
-.booking-empty h3 {
-    color: #172033;
+
+.booking-page .actions {
+    margin-top: 18px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
 }
-@media(max-width: 650px) {
-    .booking-form { grid-template-columns: 1fr; }
-    .booking-panel { padding: 15px; }
-    .booking-header h1 { font-size: 22px; }
-    .booking-form-actions { grid-column: 1; }
+
+@media (max-width: 600px) {
+    .booking-page .panel {
+        padding: 14px;
+    }
 }
 </style>
 
 <div class="booking-page">
 
-    <div class="booking-header">
+    <div class="page-head">
         <div>
-            <h1>📅 إدارة الحجوزات</h1>
-            <p>متابعة حجوزات العملاء والغرف والمدفوعات والفواتير.</p>
-        </div>
-        <div class="booking-actions">
-            <a href="#new-booking" class="btn gold">＋ حجز جديد</a>
-            <a href="{{ url_for('group_bookings') }}" class="btn light">
-                👥 حجوزات المجموعات
-            </a>
+            <h1>📋 إدارة الحجوزات</h1>
+            <p class="muted">
+                تسجيل حجوزات النزلاء ومتابعة المبالغ وحالة كل حجز.
+            </p>
         </div>
     </div>
 
-    <div class="booking-cards">
-        <div class="booking-card">
-            <div class="card-icon">📅</div>
-            <div class="card-number">{{ bookings|length }}</div>
-            <div class="card-label">الحجوزات المعروضة</div>
-        </div>
-
-        <div class="booking-card">
-            <div class="card-icon">🏨</div>
-            <div class="card-number">{{ hotels|length }}</div>
-            <div class="card-label">الفنادق المسجلة</div>
-        </div>
-
-        <div class="booking-card">
-            <div class="card-icon">🛏️</div>
-            <div class="card-number">{{ rooms|length }}</div>
-            <div class="card-label">الغرف المسجلة</div>
-        </div>
-
-        <div class="booking-card">
-            <div class="card-icon">🧾</div>
-            <div class="card-number">الفواتير</div>
-            <div class="card-label">عرض الفواتير من الحجز</div>
-        </div>
-    </div>
-
-    <div class="booking-panel" id="new-booking">
+    <div class="panel">
         <h2>➕ إنشاء حجز جديد</h2>
-        <div class="panel-description">
-            أدخل بيانات العميل، ثم اختر الفندق والغرفة وتواريخ الإقامة.
-        </div>
 
-        <form method="post" class="booking-form">
-            <div class="booking-field">
-                <label for="customer">اسم العميل *</label>
-                <input id="customer" type="text" name="customer"
-                       placeholder="اسم العميل الكامل" required>
+        {% if hotels and rooms %}
+        <form
+            method="post"
+            action="{{ url_for('bookings') }}"
+            id="booking-form">
+
+            <div class="form-grid">
+
+                <div class="field">
+                    <label for="customer-name">اسم النزيل *</label>
+                    <input
+                        type="text"
+                        id="customer-name"
+                        name="name"
+                        maxlength="200"
+                        required
+                        placeholder="اسم النزيل الكامل">
+                </div>
+
+                <div class="field">
+                    <label for="customer-phone">رقم الهاتف</label>
+                    <input
+                        type="tel"
+                        id="customer-phone"
+                        name="phone"
+                        maxlength="40"
+                        placeholder="رقم التواصل">
+                </div>
+
+                <div class="field">
+                    <label for="hotel-id">الفندق *</label>
+                    <select
+                        id="hotel-id"
+                        name="hotel_id"
+                        required>
+                        <option value="">اختر الفندق</option>
+                        {% for h in hotels %}
+                        <option value="{{ h.id }}">{{ h.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="room-id">الغرفة *</label>
+                    <select
+                        id="room-id"
+                        name="room_id"
+                        required>
+                        <option value="">اختر الفندق أولًا</option>
+                        {% for r in rooms %}
+                        <option
+                            value="{{ r.id }}"
+                            data-hotel-id="{{ r.hotel_id }}"
+                            data-price="{{ r.price or 0 }}"
+                            data-room-status="{{ r.status }}">
+                            غرفة {{ r.number }} — {{ r.room_type or 'عادية' }}
+                            — {{ '%.2f'|format(r.price or 0) }} ريال لليلة
+                            {% if r.status == 'maintenance' %}
+                            — صيانة
+                            {% elif r.status == 'cleaning' %}
+                            — تنظيف
+                            {% elif r.status == 'out_of_service' %}
+                            — خارج الخدمة
+                            {% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="checkin">تاريخ الدخول *</label>
+                    <input
+                        type="date"
+                        id="checkin"
+                        name="checkin"
+                        required>
+                </div>
+
+                <div class="field">
+                    <label for="checkout">تاريخ الخروج *</label>
+                    <input
+                        type="date"
+                        id="checkout"
+                        name="checkout"
+                        required>
+                </div>
+
+                <div class="field">
+                    <label for="paid">المبلغ المدفوع (ريال)</label>
+                    <input
+                        type="number"
+                        id="paid"
+                        name="paid"
+                        min="0"
+                        step="0.01"
+                        value="0">
+                </div>
+
+                <div class="field">
+                    <label for="payment-method">طريقة الدفع</label>
+                    <select
+                        id="payment-method"
+                        name="payment_method">
+                        <option value="cash">نقدًا</option>
+                        <option value="card">بطاقة</option>
+                        <option value="transfer">تحويل بنكي</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="payment-url">رابط الدفع، إن وجد</label>
+                    <input
+                        type="url"
+                        id="payment-url"
+                        name="payment_url"
+                        placeholder="https://...">
+                </div>
+
             </div>
 
-            <div class="booking-field">
-                <label for="phone">رقم الجوال</label>
-                <input id="phone" type="tel" name="phone"
-                       placeholder="05xxxxxxxx">
+            <div class="summary-grid">
+                <div class="summary-item">
+                    <small>عدد الليالي</small>
+                    <strong id="nights-count">0</strong>
+                </div>
+
+                <div class="summary-item">
+                    <small>سعر الغرفة لليلة</small>
+                    <strong id="night-price">0.00 ريال</strong>
+                </div>
+
+                <div class="summary-item">
+                    <small>الإجمالي التقديري</small>
+                    <strong id="booking-total">0.00 ريال</strong>
+                </div>
+
+                <div class="summary-item">
+                    <small>المتبقي التقديري</small>
+                    <strong id="booking-remaining">0.00 ريال</strong>
+                </div>
             </div>
 
-            <div class="booking-field">
-                <label for="hotel_id">الفندق *</label>
-                <select id="hotel_id" name="hotel_id" required>
-                    <option value="">اختر الفندق</option>
-                    {% for h in hotels %}
-                    <option value="{{ h.id }}">{{ h.name }}</option>
-                    {% endfor %}
-                </select>
+            <div
+                id="booking-error"
+                class="form-error"
+                role="alert"></div>
+
+            <div class="actions">
+                <button type="submit" class="btn primary">
+                    💾 حفظ الحجز
+                </button>
             </div>
 
-            <div class="booking-field">
-                <label for="room_id">الغرفة *</label>
-                <select id="room_id" name="room_id" required>
-                    <option value="">اختر الغرفة</option>
-                    {% for r in rooms %}
-                    <option value="{{ r.id }}" data-hotel="{{ r.hotel_id }}">
-                        غرفة {{ r.number }} — {{ r.room_type }} — {{ r.price }} ر.س
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
+            <p class="muted">
+                السعر المعروض تقديري؛ يتم حساب السعر النهائي من سعر الغرفة
+                المسجل في قاعدة البيانات.
+            </p>
 
-            <div class="booking-field">
-                <label for="checkin">تاريخ الدخول *</label>
-                <input id="checkin" type="date" name="checkin" required>
-            </div>
-
-            <div class="booking-field">
-                <label for="checkout">تاريخ الخروج *</label>
-                <input id="checkout" type="date" name="checkout" required>
-            </div>
-
-            <div class="booking-field">
-                <label for="paid">المبلغ المدفوع (ر.س)</label>
-                <input id="paid" type="number" name="paid"
-                       value="0" min="0" step="0.01">
-            </div>
-
-            <div class="booking-field">
-                <label for="payment_method">طريقة الدفع</label>
-                <select id="payment_method" name="payment_method">
-                    <option value="cash">نقدي</option>
-                    <option value="card">بطاقة</option>
-                    <option value="transfer">تحويل بنكي</option>
-                </select>
-            </div>
-
-            <div class="booking-form-actions">
-                <button type="submit" class="btn gold">✓ إنشاء الحجز</button>
-                <a href="{{ url_for('bookings') }}" class="btn light">إلغاء</a>
-            </div>
         </form>
+        {% else %}
+        <p class="muted">
+            لا يمكن إنشاء حجز حاليًا. تأكد من إضافة فندق وغرفة أولًا.
+        </p>
+        {% endif %}
     </div>
 
-    <div class="booking-panel">
-        <h2>📋 جميع الحجوزات</h2>
-        <div class="panel-description">
-            راجع إجمالي كل حجز والمدفوع والمتبقي، وافتح الفاتورة عند الحاجة.
+    <div class="panel">
+        <h2>📚 سجل الحجوزات</h2>
+
+        <div class="form-grid" style="margin-bottom:16px">
+            <div class="field">
+                <label for="booking-search">البحث</label>
+                <input
+                    type="search"
+                    id="booking-search"
+                    placeholder="رقم الحجز أو اسم النزيل أو الهاتف">
+            </div>
+
+            <div class="field">
+                <label for="booking-status-filter">تصفية حسب الحالة</label>
+                <select id="booking-status-filter">
+                    <option value="">جميع الحالات</option>
+                    <option value="confirmed">مؤكد</option>
+                    <option value="cancelled">ملغى</option>
+                    <option value="pending">قيد الانتظار</option>
+                </select>
+            </div>
         </div>
 
-        <div class="booking-note">
-            تنبيه: إظهار رابط الدفع لا يعني أن المبلغ قد تم تحصيله.
-            يجب التحقق من حالة الدفع من جهة الخادم.
-        </div>
-
-        {% if bookings %}
-        <div class="booking-table-wrap">
-            <table class="booking-table">
+        <div class="table-wrap">
+            <table id="bookings-table">
                 <thead>
                     <tr>
                         <th>رقم الحجز</th>
-                        <th>العميل</th>
+                        <th>النزيل</th>
+                        <th>الهاتف</th>
                         <th>الفندق</th>
                         <th>الغرفة</th>
                         <th>الدخول</th>
                         <th>الخروج</th>
+                        <th>الليالي</th>
                         <th>الإجمالي</th>
                         <th>المدفوع</th>
                         <th>المتبقي</th>
-                        <th>حالة السداد</th>
-                        <th>الإجراءات</th>
+                        <th>الحالة</th>
+                        <th>الإجراء</th>
                     </tr>
                 </thead>
+
                 <tbody>
                     {% for b in bookings %}
-                    {% set total = b.price|float %}
-                    {% set paid_amount = b.paid|float %}
-                    {% set remaining = [total - paid_amount, 0]|max %}
-                    {% set booking_status = b.status|default('confirmed', true) %}
-                    {% set payment_status = b.payment_status|default('', true) %}
+                    <tr
+                        data-status="{{ b.status or '' }}"
+                        data-search="{{ (
+                            (b.code or '') ~ ' ' ~
+                            (b.customer or '') ~ ' ' ~
+                            (b.customer_phone or '') ~ ' ' ~
+                            (b.hotel or '') ~ ' ' ~
+                            (b.room or '')
+                        )|lower }}">
 
-                    <tr>
-                        <td><strong>{{ b.code }}</strong></td>
-                        <td>{{ b.customer }}</td>
-                        <td>🏨 {{ b.hotel }}</td>
-                        <td>🛏️ {{ b.room }}</td>
-                        <td>{{ b.checkin }}</td>
-                        <td>{{ b.checkout }}</td>
+                        <td>
+                            <strong>{{ b.code or ('BK-' ~ b.id) }}</strong>
+                        </td>
 
-                        <td class="booking-money">
-                            {{ "{:,.2f}".format(total) }} ر.س
-                        </td>
-                        <td class="booking-money">
-                            {{ "{:,.2f}".format(paid_amount) }} ر.س
-                        </td>
-                        <td class="booking-money">
-                            <strong>{{ "{:,.2f}".format(remaining) }} ر.س</strong>
+                        <td>{{ b.customer or '—' }}</td>
+                        <td>{{ b.customer_phone or '—' }}</td>
+                        <td>{{ b.hotel or '—' }}</td>
+                        <td>{{ b.room or '—' }}</td>
+                        <td>{{ b.checkin or '—' }}</td>
+                        <td>{{ b.checkout or '—' }}</td>
+                        <td>{{ b.nights or 0 }}</td>
+
+                        <td>
+                            {{ '%.2f'|format(b.price or 0) }} ريال
                         </td>
 
                         <td>
-                            {% if booking_status == 'cancelled' %}
-                                <span class="booking-status status-cancelled">ملغي</span>
-                            {% elif remaining <= 0 %}
-                                <span class="booking-status status-paid">مسدد بالكامل</span>
-                            {% elif paid_amount > 0 %}
-                                <span class="booking-status status-partial">سداد جزئي</span>
-                            {% elif payment_status == 'pending' %}
-                                <span class="booking-status status-pending">بانتظار الدفع</span>
+                            {{ '%.2f'|format(b.paid or 0) }} ريال
+                        </td>
+
+                        <td>
+                            {{ '%.2f'|format((b.price or 0) - (b.paid or 0)) }}
+                            ريال
+                        </td>
+
+                        <td>
+                            <span class="status-tag
+                                {% if b.status == 'cancelled' %}status-cancelled
+                                {% elif b.status == 'pending' %}status-pending
+                                {% endif %}">
+                                {% if b.status == 'confirmed' %}
+                                    مؤكد
+                                {% elif b.status == 'cancelled' %}
+                                    ملغى
+                                {% elif b.status == 'pending' %}
+                                    قيد الانتظار
+                                {% else %}
+                                    {{ b.status or '—' }}
+                                {% endif %}
+                            </span>
+                        </td>
+
+                        <td>
+                            {% if b.status != 'cancelled' %}
+                            <form
+                                method="post"
+                                action="{{ url_for('cancel_booking', bid=b.id) }}"
+                                onsubmit="return confirm('هل تريد إلغاء هذا الحجز؟');">
+
+                                <button
+                                    type="submit"
+                                    class="cancel-btn">
+                                    إلغاء الحجز
+                                </button>
+                            </form>
                             {% else %}
-                                <span class="booking-status status-unpaid">غير مسدد</span>
+                            —
                             {% endif %}
                         </td>
-
-                        <td>
-                            <div class="booking-row-actions">
-                                <a class="btn gold"
-                                   href="{{ url_for('invoices', bid=b.id) }}">
-                                    🧾 عرض الفاتورة
-                                </a>
-
-                                {% if booking_status != 'cancelled' and remaining > 0 %}
-                                <form class="booking-payment-form" method="post"
-                                      action="{{ url_for('create_payment_link', bid=b.id) }}">
-                                    <button type="submit" class="btn">
-                                        💳 إنشاء رابط الدفع
-                                    </button>
-                                </form>
-                                {% endif %}
-
-                                {% if b.payment_url %}
-                                <a class="btn light"
-                                   href="{{ b.payment_url }}"
-                                   target="_blank"
-                                   rel="noopener noreferrer">
-                                    🔗 فتح رابط الدفع
-                                </a>
-
-                                <button type="button" class="btn light"
-                                        onclick="copyPaymentLink(this)"
-                                        data-payment-url="{{ b.payment_url }}">
-                                    📋 نسخ رابط الدفع
-                                </button>
-                                {% endif %}
-
-                                {% if booking_status == 'cancelled' %}
-                                    <span class="card-label">الحجز ملغي</span>
-                                {% elif remaining <= 0 %}
-                                    <span class="card-label">لا يوجد مبلغ متبقٍ</span>
-                                {% endif %}
-                            </div>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="13" class="empty-state">
+                            لا توجد حجوزات مسجلة حتى الآن.
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-        {% else %}
-        <div class="booking-empty">
-            <div class="empty-icon">📅</div>
-            <h3>لا توجد حجوزات حتى الآن</h3>
-            <p>يمكنك إنشاء أول حجز باستخدام النموذج أعلاه.</p>
-            <a href="#new-booking" class="btn gold">＋ إضافة أول حجز</a>
-        </div>
-        {% endif %}
+
+        <p class="muted" id="booking-results-count"></p>
     </div>
 
 </div>
 
 <script>
-const hotelSelect = document.getElementById("hotel_id");
-const roomSelect = document.getElementById("room_id");
-const checkinInput = document.getElementById("checkin");
-const checkoutInput = document.getElementById("checkout");
+(function () {
+    const form = document.getElementById("booking-form");
 
-function filterRoomsByHotel() {
-    const hotelId = hotelSelect.value;
+    if (form) {
+        const hotelSelect = document.getElementById("hotel-id");
+        const roomSelect = document.getElementById("room-id");
+        const checkinInput = document.getElementById("checkin");
+        const checkoutInput = document.getElementById("checkout");
+        const paidInput = document.getElementById("paid");
+        const errorBox = document.getElementById("booking-error");
 
-    Array.from(roomSelect.options).forEach((option, index) => {
-        if (index === 0) {
-            option.hidden = false;
-            return;
+        const nightsOutput = document.getElementById("nights-count");
+        const priceOutput = document.getElementById("night-price");
+        const totalOutput = document.getElementById("booking-total");
+        const remainingOutput = document.getElementById("booking-remaining");
+
+        const allRoomOptions = Array.from(roomSelect.options).slice(1);
+
+        function dateValue(value) {
+            if (!value) return null;
+
+            const parts = value.split("-").map(Number);
+            if (parts.length !== 3 || parts.some(Number.isNaN)) {
+                return null;
+            }
+
+            return Date.UTC(parts[0], parts[1] - 1, parts[2]);
         }
 
-        option.hidden = !hotelId || option.dataset.hotel !== hotelId;
+        function selectedRoomOption() {
+            return roomSelect.options[roomSelect.selectedIndex];
+        }
 
-        if (option.hidden && option.selected) {
+        function showError(message) {
+            errorBox.textContent = message;
+            errorBox.style.display = "block";
+        }
+
+        function clearError() {
+            errorBox.textContent = "";
+            errorBox.style.display = "none";
+        }
+
+        function updateRooms() {
+            const hotelId = hotelSelect.value;
+
             roomSelect.value = "";
+
+            allRoomOptions.forEach(function (option) {
+                const matchesHotel =
+                    hotelId && option.dataset.hotelId === hotelId;
+
+                option.hidden = !matchesHotel;
+                option.disabled = !matchesHotel;
+            });
+
+            updateEstimate();
         }
-    });
-}
 
-hotelSelect.addEventListener("change", filterRoomsByHotel);
+        function updateEstimate() {
+            const option = selectedRoomOption();
 
-checkinInput.addEventListener("change", function () {
-    checkoutInput.min = this.value;
+            const roomPrice = option && option.value
+                ? Math.max(0, Number(option.dataset.price || 0))
+                : 0;
 
-    if (checkoutInput.value && checkoutInput.value <= this.value) {
-        checkoutInput.value = "";
+            const checkin = dateValue(checkinInput.value);
+            const checkout = dateValue(checkoutInput.value);
+
+            let nights = 0;
+
+            if (
+                checkin !== null &&
+                checkout !== null &&
+                checkout > checkin
+            ) {
+                nights = Math.round((checkout - checkin) / 86400000);
+            }
+
+            const total = roomPrice * nights;
+            const paid = Math.max(0, Number(paidInput.value || 0));
+            const remaining = Math.max(0, total - paid);
+
+            nightsOutput.textContent = String(nights);
+            priceOutput.textContent = roomPrice.toFixed(2) + " ريال";
+            totalOutput.textContent = total.toFixed(2) + " ريال";
+            remainingOutput.textContent = remaining.toFixed(2) + " ريال";
+        }
+
+        hotelSelect.addEventListener("change", updateRooms);
+        roomSelect.addEventListener("change", updateEstimate);
+        checkinInput.addEventListener("change", updateEstimate);
+        checkoutInput.addEventListener("change", updateEstimate);
+        paidInput.addEventListener("input", updateEstimate);
+
+        form.addEventListener("submit", function (event) {
+            clearError();
+
+            const option = selectedRoomOption();
+            const checkin = dateValue(checkinInput.value);
+            const checkout = dateValue(checkoutInput.value);
+            const paid = Number(paidInput.value || 0);
+
+            if (!hotelSelect.value) {
+                event.preventDefault();
+                showError("يرجى اختيار الفندق.");
+                hotelSelect.focus();
+                return;
+            }
+
+            if (
+                !option ||
+                !option.value ||
+                option.disabled ||
+                option.dataset.hotelId !== hotelSelect.value
+            ) {
+                event.preventDefault();
+                showError("يرجى اختيار غرفة صالحة من الفندق المحدد.");
+                roomSelect.focus();
+                return;
+            }
+
+            if (
+                checkin === null ||
+                checkout === null ||
+                checkout <= checkin
+            ) {
+                event.preventDefault();
+                showError("تاريخ الخروج يجب أن يكون بعد تاريخ الدخول.");
+                checkoutInput.focus();
+                return;
+            }
+
+            if (!Number.isFinite(paid) || paid < 0) {
+                event.preventDefault();
+                showError("المبلغ المدفوع يجب أن يكون صفرًا أو أكثر.");
+                paidInput.focus();
+                return;
+            }
+
+            const roomPrice = Math.max(
+                0,
+                Number(option.dataset.price || 0)
+            );
+
+            const nights = (checkout - checkin) / 86400000;
+            const estimatedTotal = roomPrice * nights;
+
+            if (paid > estimatedTotal) {
+                event.preventDefault();
+                showError(
+                    "المبلغ المدفوع أكبر من الإجمالي التقديري. " +
+                    "راجع السعر والتواريخ والمبلغ."
+                );
+                paidInput.focus();
+            }
+        });
+
+        updateRooms();
     }
-});
 
-async function copyPaymentLink(button) {
-    const url = button.dataset.paymentUrl;
+    const searchInput = document.getElementById("booking-search");
+    const statusFilter = document.getElementById("booking-status-filter");
+    const table = document.getElementById("bookings-table");
+    const resultsCount = document.getElementById("booking-results-count");
 
-    if (!url) {
-        alert("رابط الدفع غير موجود.");
-        return;
+    if (searchInput && statusFilter && table) {
+        const rows = Array.from(
+            table.querySelectorAll("tbody tr[data-status]")
+        );
+
+        function filterBookings() {
+            const query = searchInput.value.trim().toLowerCase();
+            const status = statusFilter.value;
+            let visible = 0;
+
+            rows.forEach(function (row) {
+                const matchesText =
+                    (row.dataset.search || "").includes(query);
+
+                const matchesStatus =
+                    !status || row.dataset.status === status;
+
+                const show = matchesText && matchesStatus;
+
+                row.style.display = show ? "" : "none";
+
+                if (show) visible++;
+            });
+
+            resultsCount.textContent =
+                "عدد الحجوزات المعروضة: " + visible;
+        }
+
+        searchInput.addEventListener("input", filterBookings);
+        statusFilter.addEventListener("change", filterBookings);
+
+        filterBookings();
     }
-
-    try {
-        await navigator.clipboard.writeText(url);
-        const oldText = button.textContent;
-        button.textContent = "✓ تم نسخ الرابط";
-        setTimeout(() => {
-            button.textContent = oldText;
-        }, 1800);
-    } catch (error) {
-        window.prompt("انسخ رابط الدفع:", url);
-    }
-}
-
-filterRoomsByHotel();
+})();
 </script>
 
 {% endblock %}
+```
