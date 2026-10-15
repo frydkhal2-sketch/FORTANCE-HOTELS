@@ -838,6 +838,34 @@ tbody tr:last-child td{
         margin-right: 0;
         padding: 16px 12px 25px;
     }
+
+.form-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
 }
+
+.toggle-form-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 16px;
+    border: 1px solid #d9a83f;
+    border-radius: 8px;
+    background: #071426;
+    color: #ffffff;
+    font: inherit;
+    cursor: pointer;
+    position: relative;
+    z-index: 2;
+}
+
+.toggle-form-btn:hover {
+    background: #102844;
+}
+
 
 
