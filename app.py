@@ -305,8 +305,6 @@ def init_db():
             ("فندق ريان الجوار", "مكة المكرمة", "")
         )
 
-    # إزالة الغرف التجريبية القديمة مرة واحدة فقط،
-    # وفقط إذا لم توجد حجوزات حالية مرتبطة بها.
     cleanup = connection.execute(
         """
         SELECT value
@@ -1120,7 +1118,7 @@ def rooms():
         FROM rooms r
         JOIN hotels h
             ON h.id=r.hotel_id
-        WHERE (?='' OR r.hotel_id=?)
+        WHERE (?='' OR r.hotel_id=? )
         ORDER BY h.name,r.number
         """,
         (
