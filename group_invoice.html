@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}فاتورة المجموعة {{ g.code }} | FORTANCE HOTELS{% endblock %}
+{% block extra_head %}
+<style>
+.group-invoice{direction:rtl;color:#1e293b}.group-invoice-toolbar{max-width:900px;margin:0 auto 15px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.group-invoice-actions{display:flex;gap:8px;flex-wrap:wrap}.group-invoice-actions a,.group-invoice-actions button{border:0;border-radius:8px;padding:10px 14px;text-decoration:none;font:inherit;cursor:pointer}.group-invoice-actions .back{background:#e8effa;color:#071426}.group-invoice-actions .print{background:#d9a83f;color:#071426}.group-invoice-actions .whatsapp{background:#25d366;color:#fff}.group-invoice-sheet{max-width:900px;margin:auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:30px}.group-invoice-head{display:flex;justify-content:space-between;gap:20px;border-bottom:3px solid #d9a83f;padding-bottom:18px}.group-invoice-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:20px 0}.group-invoice-card{border:1px solid #e2e8f0;border-radius:9px;padding:13px;background:#f8fafc}.group-invoice-card small{display:block;color:#718096;margin-bottom:7px}.group-invoice-table{width:100%;border-collapse:collapse;margin-top:15px}.group-invoice-table th,.group-invoice-table td{padding:12px;border-bottom:1px solid #e2e8f0;text-align:right}.group-invoice-table th{background:#102844;color:#fff}.group-invoice-total{max-width:380px;margin:22px 0 0 auto;padding:15px;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc}.group-invoice-total div{display:flex;justify-content:space-between;padding:7px 0}.group-invoice-footer{text-align:center;margin-top:25px;padding-top:14px;border-top:1px solid #e2e8f0;color:#718096}
+@media(max-width:600px){.group-invoice-sheet{padding:16px}.group-invoice-head{flex-direction:column}.group-invoice-toolbar{align-items:flex-start}.group-invoice-actions{width:100%}.group-invoice-actions a,.group-invoice-actions button{flex:1;text-align:center}}
+@media print{body{background:#fff!important}.group-invoice-toolbar{display:none!important}.group-invoice-sheet{border:0;max-width:none;box-shadow:none;padding:0}}
+</style>
+{% endblock %}
+{% block content %}
+<div class="group-invoice">
+  <div class="group-invoice-toolbar"><strong>فاتورة المجموعة {{ g.code }}</strong><div class="group-invoice-actions">
+    <a class="back" href="{{ url_for('group_bookings') }}">العودة للحجوزات</a>
+    {% if whatsapp_url %}<a class="whatsapp" href="{{ whatsapp_url }}" target="_blank" rel="noopener">إرسال عبر واتساب</a>{% endif %}
+    <button class="print" type="button" onclick="window.print()">طباعة / حفظ PDF</button>
+  </div></div>
+  <div class="group-invoice-sheet">
+    <div class="group-invoice-head"><div><h1>{{ settings.company_name or 'FORTANCE HOTELS' }}</h1><div>{{ settings.company_address or '' }}</div><div>الهاتف: {{ settings.company_phone or '' }}</div></div><div><h1>فاتورة مجموعة</h1><div>رقم الفاتورة: {{ g.code }}</div><div>التاريخ: {{ g.created_at[:10] if g.created_at else '—' }}</div></div></div>
+    <div class="group-invoice-grid">
+      <div class="group-invoice-card"><small>اسم المجموعة</small><strong>{{ g.group_name }}</strong></div>
+      <div class="group-invoice-card"><small>الشركة</small><strong>{{ g.company or '—' }}</strong></div>
+      <div class="group-invoice-card"><small>مسؤول التواصل</small><strong>{{ g.contact_name or '—' }}</strong></div>
+      <div class="group-invoice-card"><small>رقم الهاتف</small><strong>{{ g.phone or '—' }}</strong></div>
+      <div class="group-invoice-card"><small>الفندق</small><strong>{{ g.hotel }}</strong></div>
+      <div class="group-invoice-card"><small>فترة الإقامة</small><strong>{{ g.checkin }} — {{ g.checkout }}</strong></div>
+      <div class="group-invoice-card"><small>عدد النزلاء</small><strong>{{ g.guests or 0 }}</strong></div>
+      <div class="group-invoice-card"><small>حالة الحجز</small><strong>{{ 'مؤكد' if g.status == 'confirmed' else ('ملغى' if g.status == 'cancelled' else (g.status or '—')) }}</strong></div>
+    </div>
+    <table class="group-invoice-table"><thead><tr><th>الغرفة</th><th>النوع</th><th>السعر الإجمالي</th></tr></thead><tbody>
+      {% for r in rooms %}<tr><td>{{ r.number }}</td><td>{{ r.room_type or '—' }}</td><td>{{ '%.2f'|format(r.price or 0) }} {{ settings.currency or 'ريال سعودي' }}</td></tr>{% else %}<tr><td colspan="3">لا توجد غرف مرتبطة بهذا الحجز.</td></tr>{% endfor %}
+    </tbody></table>
+    <div class="group-invoice-total"><div><span>الإجمالي:</span><strong>{{ '%.2f'|format(g.total or 0) }} {{ settings.currency or 'ريال سعودي' }}</strong></div><div><span>المدفوع:</span><strong>{{ '%.2f'|format(g.paid or 0) }} {{ settings.currency or 'ريال سعودي' }}</strong></div><div><span>المتبقي:</span><strong>{{ '%.2f'|format(remaining or 0) }} {{ settings.currency or 'ريال سعودي' }}</strong></div></div>
+    {% if g.notes %}<p><strong>ملاحظات:</strong> {{ g.notes }}</p>{% endif %}
+    <div class="group-invoice-footer">شكرًا لاختياركم {{ settings.company_name or 'FORTANCE HOTELS' }}</div>
+  </div>
+</div>
+{% endblock %}
