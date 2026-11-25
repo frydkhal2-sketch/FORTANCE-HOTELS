@@ -5,7 +5,6 @@ import sqlite3
 import hashlib
 import secrets
 import requests
-
 from flask import (
     Flask,
     Response,
@@ -27,18 +26,14 @@ app = Flask(
     __name__,
     template_folder=".",
     static_folder=".",
-    static_url_path="/static"
-)
-
+    static_url_path="/static")
 app.secret_key = os.environ.get("FORTANCE_SECRET", secrets.token_hex(32))
 
 ROLES = {
     "admin": "مدير النظام",
     "manager": "مدير",
     "reception": "استقبال",
-    "accountant": "محاسب"
-}
-
+    "accountant": "محاسب"}
 DEFAULT_SETTINGS = {
     "company_name": "FORTANCE HOTELS",
     "company_phone": "",
@@ -46,20 +41,14 @@ DEFAULT_SETTINGS = {
     "company_address": "",
     "currency": "ريال سعودي",
     "payment_url": "",
-    "payment_provider": ""
-}
-
-
+    "payment_provider": ""}
 def db():
     connection = sqlite3.connect(DB)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys=ON")
     return connection
-
-
 def hash_pw(password):
     return hashlib.sha256(password.encode("utf-8")).hexdigest()
-
 
 def ensure_column(connection, table, column, definition):
     cols = {
@@ -70,9 +59,7 @@ def ensure_column(connection, table, column, definition):
     }
     if column not in cols:
         connection.execute(
-            f"ALTER TABLE {table} ADD COLUMN {column} {definition}"
-        )
-
+            f"ALTER TABLE {table} ADD COLUMN {column} {definition}"   )
 
 def get_settings(connection=None):
     own = connection is None
@@ -89,10 +76,7 @@ def get_settings(connection=None):
 
     if own:
         connection.close()
-
     return settings
-
-
 def save_setting(connection, key, value):
     connection.execute(
         """
@@ -101,10 +85,7 @@ def save_setting(connection, key, value):
         ON CONFLICT(key)
         DO UPDATE SET value=excluded.value
         """,
-        (key, value)
-    )
-
-
+        (key, value)   )
 def init_db():
     connection = db()
 
@@ -137,9 +118,7 @@ def init_db():
             price REAL NOT NULL DEFAULT 0,
             status TEXT NOT NULL DEFAULT 'available',
             UNIQUE(hotel_id, number),
-            FOREIGN KEY(hotel_id) REFERENCES hotels(id)
-        );
-
+            FOREIGN KEY(hotel_id) REFERENCES hotels(id));
         CREATE TABLE IF NOT EXISTS customers(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
@@ -249,9 +228,7 @@ def init_db():
             created_at TEXT NOT NULL,
             created_by INTEGER
         );
-        """
-    )
-
+        """ )
     # إضافة أعمدة جديدة للقاعدة الحالية بدون حذف البيانات القديمة.
     ensure_column(
         connection, "bookings", "payment_method",
@@ -883,17 +860,13 @@ def hotels():
                 request.form["name"].strip(),
                 request.form.get("city", "").strip(),
                 request.form.get("phone", "").strip(),
-                request.form.get("notes", "").strip()
-            )
+                request.form.get("notes", "").strip()  )
         )
-
-        connection.commit()
+    connection.commit()
 
         flash(
             "تمت إضافة الفندق.",
-            "ok"
-        )
-
+            "ok" )
     rows = connection.execute(
         """
         SELECT
@@ -912,10 +885,7 @@ def hotels():
 
     return render_template(
         "hotels.html",
-        hotels=rows
-    )
-
-
+        hotels=rows   )
 def get_room_status(room_id, today, bookings):
     for booking in bookings:
         if booking["room_id"] != room_id:
@@ -1534,9 +1504,7 @@ def bookings():
                 payment_method,
                 payment_url
             )
-        )
-
-        booking_id = cursor.lastrowid
+        )   booking_id = cursor.lastrowid
 
         connection.execute(
             """
@@ -2271,7 +2239,6 @@ def companies():
         companies=rows
     )
 
-
 @app.route("/invoices/<int:bid>")
 @login_required
 def invoice(bid):
@@ -2723,7 +2690,6 @@ def moyasar_callback():
     finally:
         connection.close()
 
-
 @app.route("/payments/moyasar/return")
 @login_required
 def moyasar_return():
@@ -2777,7 +2743,6 @@ def moyasar_return():
                     + str(invoice_data.get("status")),
                     "error",
                 )
-
     except (requests.RequestException, ValueError):
         app.logger.exception("Moyasar return verification failed")
         flash("تعذر التحقق من الدفع الآن. حاول تحديث الحجوزات لاحقاً.", "error")
@@ -2787,7 +2752,6 @@ def moyasar_return():
 
     return redirect(url_for("bookings"))
 
-
 # Initialize the database when the application module loads.
 # Keep existing tables and records; do not delete the database.
 init_db()
@@ -2796,5 +2760,4 @@ if __name__ == "__main__":
     app.run(
         debug=False,
         host="0.0.0.0",
-        port=int(os.environ.get("PORT", "5000"))
-    )
+        port=int(os.environ.get("PORT", "5000")) )
