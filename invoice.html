@@ -1,11 +1,230 @@
+```html
 {% extends "base.html" %}
+
 {% block title %}فاتورة FORTANCE HOTELS{% endblock %}
-{% block extra_head %}<style>.invoice-toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:15px}.invoice-actions{display:flex;gap:8px;flex-wrap:wrap}.invoice-actions a,.invoice-actions button{border:0;border-radius:8px;padding:10px 14px;text-decoration:none;font:inherit;cursor:pointer}.invoice-actions .back{background:#e8effa;color:#071426}.invoice-actions .print{background:#d9a83f;color:#071426}.invoice-actions .whatsapp{background:#25d366;color:#fff}.invoice-actions .whatsapp.disabled{background:#cbd5e1;color:#64748b;pointer-events:none}.invoice-sheet{max-width:900px;margin:auto;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:28px}.invoice-head{display:flex;justify-content:space-between;gap:20px;border-bottom:3px solid #d9a83f;padding-bottom:16px}.invoice-head h1{color:#071426;margin:0}.invoice-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:18px 0}.invoice-card{border:1px solid #e2e8f0;border-radius:8px;padding:12px;background:#f8fafc}.invoice-card small{display:block;color:#718096}.invoice-table{width:100%;border-collapse:collapse;margin-top:12px}.invoice-table th,.invoice-table td{padding:11px;border-bottom:1px solid #e2e8f0;text-align:right}.invoice-total{text-align:left;font-size:18px;margin-top:18px}.invoice-remaining{font-weight:bold;color:#8a5b00}@media(max-width:600px){.invoice-sheet{padding:16px}.invoice-head{flex-direction:column}.invoice-toolbar{align-items:flex-start}.invoice-actions{width:100%}}@media print{.invoice-toolbar{display:none!important}.invoice-sheet{border:0;max-width:none;box-shadow:none}}@media print{.invoice-sheet{direction:rtl}}</style>{% endblock %}
-{% block content %}
-<div class="invoice-toolbar"><strong>فاتورة {{ b.code or b.id }}</strong><div class="invoice-actions"><a class="back" href="{{ url_for('bookings') }}">العودة للحجوزات</a>{% if whatsapp_url %}<a class="whatsapp" href="{{ whatsapp_url }}" target="_blank">إرسال عبر واتساب</a>{% else %}<span class="whatsapp disabled">لا يوجد رقم واتساب</span>{% endif %}<button class="print" type="button" onclick="window.print()">طباعة / PDF</button></div></div>
-<div class="invoice-sheet"><div class="invoice-head"><div><h1>{{ settings.company_name or 'FORTANCE HOTELS' }}</h1><div>{{ settings.company_address or '' }}</div><div>الهاتف: {{ settings.company_phone or '' }}</div></div><div style="text-align:left"><h1>فاتورة</h1><div>رقم: {{ b.code or b.id }}</div><div>التاريخ: {{ b.created_at[:10] if b.created_at else '—' }}</div></div></div>
-<div class="invoice-grid"><div class="invoice-card"><small>اسم العميل</small><strong>{{ b.customer or '—' }}</strong></div><div class="invoice-card"><small>رقم الجوال</small><strong>{{ b.phone or '—' }}</strong></div><div class="invoice-card"><small>الفندق</small><strong>{{ b.hotel or '—' }}</strong></div><div class="invoice-card"><small>الغرفة</small><strong>{{ b.room or '—' }} — {{ b.room_type or '—' }}</strong></div><div class="invoice-card"><small>الدخول</small><strong>{{ b.checkin or '—' }}</strong></div><div class="invoice-card"><small>الخروج</small><strong>{{ b.checkout or '—' }}</strong></div><div class="invoice-card"><small>الليالي</small><strong>{{ b.nights or 1 }}</strong></div><div class="invoice-card"><small>حالة الحجز</small><strong>{{ b.status or '—' }}</strong></div></div>
-<table class="invoice-table"><thead><tr><th>البيان</th><th>الكمية</th><th>الإجمالي</th></tr></thead><tbody><tr><td>إقامة فندقية — {{ b.hotel or '' }} / غرفة {{ b.room or '' }}</td><td>{{ b.nights or 1 }} ليلة</td><td>{{ '%.2f'|format(b.price or 0) }} {{ settings.currency or 'ريال سعودي' }}</td></tr></tbody></table>
-<div class="invoice-total"><div>الإجمالي: <strong>{{ '%.2f'|format(b.price or 0) }} {{ settings.currency or 'ريال سعودي' }}</strong></div><div>المدفوع: <strong>{{ '%.2f'|format(b.paid or 0) }} {{ settings.currency or 'ريال سعودي' }}</strong></div><div class="invoice-remaining">المتبقي: <strong>{{ '%.2f'|format(remaining or 0) }} {{ settings.currency or 'ريال سعودي' }}</strong></div></div>
-</div>
+
+{% block extra_head %}
+<style>
+.invoice-page{direction:rtl;color:#1e293b}
+.invoice-toolbar{max-width:900px;margin:0 auto 15px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.invoice-actions{display:flex;gap:8px;flex-wrap:wrap}
+.invoice-actions a,.invoice-actions button{border:0;border-radius:8px;padding:10px 14px;text-decoration:none;font:inherit;cursor:pointer}
+.invoice-actions .back{background:#e8effa;color:#071426}
+.invoice-actions .print{background:#d9a83f;color:#071426}
+.invoice-actions .whatsapp{background:#25d366;color:#fff}
+.invoice-actions .whatsapp.disabled{background:#cbd5e1;color:#64748b;pointer-events:none}
+.invoice-sheet{max-width:900px;margin:auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:30px;box-shadow:0 8px 30px rgba(15,23,42,.06)}
+.invoice-head{display:flex;justify-content:space-between;gap:20px;border-bottom:3px solid #d9a83f;padding-bottom:18px}
+.invoice-head h1{color:#071426;margin:0 0 8px}
+.invoice-head .company-name{font-size:25px;font-weight:800}
+.invoice-logo{max-width:150px;max-height:65px;object-fit:contain;margin-bottom:10px}
+.invoice-number{text-align:left}
+.invoice-number h1{font-size:27px}
+.invoice-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:20px 0}
+.invoice-card{border:1px solid #e2e8f0;border-radius:9px;padding:13px;background:#f8fafc;min-width:0}
+.invoice-card small{display:block;color:#718096;margin-bottom:7px}
+.invoice-card strong{overflow-wrap:anywhere}
+.invoice-table{width:100%;border-collapse:collapse;margin-top:15px}
+.invoice-table th,.invoice-table td{padding:13px;border-bottom:1px solid #e2e8f0;text-align:right}
+.invoice-table th{background:#102844;color:#fff}
+.invoice-total{max-width:380px;margin:22px 0 0 auto;padding:15px;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc}
+.invoice-total div{display:flex;justify-content:space-between;gap:12px;padding:7px 0}
+.invoice-remaining{font-weight:bold;color:#8a5b00;border-top:1px solid #d9a83f;margin-top:7px;padding-top:12px!important}
+.invoice-footer{margin-top:28px;padding-top:15px;border-top:1px solid #e2e8f0;text-align:center;color:#718096;font-size:13px}
+@media(max-width:600px){
+.invoice-sheet{padding:16px}
+.invoice-head{flex-direction:column}
+.invoice-number{text-align:right}
+.invoice-toolbar{align-items:flex-start}
+.invoice-actions{width:100%}
+.invoice-actions a,.invoice-actions button{flex:1;text-align:center}
+}
+@media print{
+body{background:#fff!important}
+.invoice-toolbar{display:none!important}
+.invoice-sheet{border:0;max-width:none;box-shadow:none;padding:0}
+.invoice-page{direction:rtl}
+}
+</style>
 {% endblock %}
+
+{% block content %}
+
+<div class="invoice-page">
+
+    <div class="invoice-toolbar">
+
+        <strong>فاتورة {{ b.code or b.id }}</strong>
+
+        <div class="invoice-actions">
+
+            <a class="back" href="{{ url_for('bookings') }}">
+                العودة للحجوزات
+            </a>
+
+            {% if whatsapp_url %}
+            <a class="whatsapp" href="{{ whatsapp_url }}" target="_blank" rel="noopener">
+                إرسال عبر واتساب
+            </a>
+            {% else %}
+            <span class="whatsapp disabled">
+                لا يوجد رقم واتساب
+            </span>
+            {% endif %}
+
+            <button class="print" type="button" onclick="window.print()">
+                طباعة / PDF
+            </button>
+
+        </div>
+
+    </div>
+
+    <div class="invoice-sheet">
+
+        <div class="invoice-head">
+
+            <div>
+
+                <img
+                    src="{{ url_for('static',filename='logo.jpg') }}"
+                    alt="FORTANCE HOTELS"
+                    class="invoice-logo"
+                    onerror="this.style.display='none'"
+                >
+
+                <h1 class="company-name">
+                    {{ settings.company_name or 'FORTANCE HOTELS' }}
+                </h1>
+
+                <div>{{ settings.company_address or '' }}</div>
+                <div>الهاتف: {{ settings.company_phone or '' }}</div>
+
+            </div>
+
+            <div class="invoice-number">
+
+                <h1>فاتورة</h1>
+
+                <div>رقم الفاتورة: {{ b.code or b.id }}</div>
+
+                <div>
+                    التاريخ:
+                    {{ b.created_at[:10] if b.created_at else '—' }}
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="invoice-grid">
+
+            <div class="invoice-card">
+                <small>اسم العميل</small>
+                <strong>{{ b.customer or '—' }}</strong>
+            </div>
+
+            <div class="invoice-card">
+                <small>رقم الجوال</small>
+                <strong>{{ b.phone or '—' }}</strong>
+            </div>
+
+            <div class="invoice-card">
+                <small>الفندق</small>
+                <strong>{{ b.hotel or '—' }}</strong>
+            </div>
+
+            <div class="invoice-card">
+                <small>الغرفة</small>
+                <strong>{{ b.room or '—' }} — {{ b.room_type or '—' }}</strong>
+            </div>
+
+            <div class="invoice-card">
+                <small>تاريخ الدخول</small>
+                <strong>{{ b.checkin or '—' }}</strong>
+            </div>
+
+            <div class="invoice-card">
+                <small>تاريخ الخروج</small>
+                <strong>{{ b.checkout or '—' }}</strong>
+            </div>
+
+            <div class="invoice-card">
+                <small>عدد الليالي</small>
+                <strong>{{ b.nights or 1 }}</strong>
+            </div>
+
+            <div class="invoice-card">
+                <small>حالة الحجز</small>
+                <strong>
+                    {{ 'مؤكد' if b.status=='confirmed' else ('ملغى' if b.status=='cancelled' else ('قيد الانتظار' if b.status=='pending' else (b.status or '—'))) }}
+                </strong>
+            </div>
+
+        </div>
+
+        <table class="invoice-table">
+
+            <thead>
+                <tr>
+                    <th>البيان</th>
+                    <th>الكمية</th>
+                    <th>الإجمالي</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                <tr>
+                    <td>
+                        إقامة فندقية — {{ b.hotel or '' }} / غرفة {{ b.room or '' }}
+                    </td>
+                    <td>{{ b.nights or 1 }} ليلة</td>
+                    <td>
+                        {{ '%.2f'|format(b.price or 0) }}
+                        {{ settings.currency or 'ريال سعودي' }}
+                    </td>
+                </tr>
+            </tbody>
+
+        </table>
+
+        <div class="invoice-total">
+
+            <div>
+                <span>الإجمالي:</span>
+                <strong>
+                    {{ '%.2f'|format(b.price or 0) }}
+                    {{ settings.currency or 'ريال سعودي' }}
+                </strong>
+            </div>
+
+            <div>
+                <span>المدفوع:</span>
+                <strong>
+                    {{ '%.2f'|format(b.paid or 0) }}
+                    {{ settings.currency or 'ريال سعودي' }}
+                </strong>
+            </div>
+
+            <div class="invoice-remaining">
+                <span>المتبقي:</span>
+                <strong>
+                    {{ '%.2f'|format(remaining or 0) }}
+                    {{ settings.currency or 'ريال سعودي' }}
+                </strong>
+            </div>
+
+        </div>
+
+        <div class="invoice-footer">
+            شكرًا لاختياركم {{ settings.company_name or 'FORTANCE HOTELS' }}
+            <br>
+            نتمنى لكم إقامة سعيدة.
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
+```
