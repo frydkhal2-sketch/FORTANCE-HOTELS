@@ -1,147 +1,176 @@
-```html
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-
-    <title>{% block title %}FORTANCE HOTELS{% endblock %}</title>
-
-    <link rel="stylesheet"
-          href="{{ url_for('static', filename='style.css') }}">
-
-    {% block extra_head %}{% endblock %}
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}FORTANCE HOTELS{% endblock %}</title>
+  <style>
+    :root{
+      --navy:#071426;
+      --navy2:#102844;
+      --gold:#d9a83f;
+      --gold2:#f4dfaa;
+      --bg:#f5f7fb;
+      --text:#172337;
+      --muted:#748096;
+      --line:#e6eaf0;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:Tahoma,Arial,sans-serif}
+    a{color:inherit;text-decoration:none}
+    .layout{min-height:100vh}
+    .sidebar{
+      position:fixed;right:0;top:0;bottom:0;width:260px;
+      background:linear-gradient(180deg,var(--navy),var(--navy2));
+      color:#fff;padding:22px 16px;overflow:auto;z-index:20
+    }
+    .brand{
+      display:flex;align-items:center;justify-content:center;min-height:76px;
+      padding:10px;background:#fff;border-radius:14px;margin-bottom:18px
+    }
+    .brand img{max-width:190px;max-height:58px;object-fit:contain}
+    .brand-fallback{color:var(--navy);font-weight:900;letter-spacing:2px}
+    .userbox{
+      padding:14px;background:#ffffff12;border:1px solid #ffffff20;
+      border-radius:12px;margin-bottom:18px
+    }
+    .userbox small{display:block;color:#c8d2df;margin-bottom:6px}
+    .userbox strong{display:block;color:var(--gold2)}
+    .nav-title{font-size:11px;color:#9eacc0;margin:18px 10px 8px}
+    .nav a{
+      display:flex;align-items:center;gap:10px;padding:11px 12px;
+      border-radius:9px;margin:4px 0;color:#dce4ef;font-size:14px
+    }
+    .nav a:hover,.nav a.active{
+      background:#ffffff17;color:var(--gold2);border-right:3px solid var(--gold)
+    }
+    .main{margin-right:260px;padding:26px;min-height:100vh}
+    .topline{
+      display:flex;justify-content:space-between;align-items:center;
+      gap:12px;margin-bottom:22px
+    }
+    .topline h1{font-size:23px;margin:0;color:var(--navy)}
+    .topline .sub{color:var(--muted);font-size:13px;margin-top:6px}
+    .card{
+      background:#fff;border:1px solid var(--line);border-radius:15px;
+      padding:20px;margin-bottom:18px;box-shadow:0 5px 18px #10284408
+    }
+    .card h2,.card h3{margin:0 0 16px;color:var(--navy)}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+    .field{display:flex;flex-direction:column;gap:7px}
+    .field label{font-size:13px;font-weight:bold;color:#40506a}
+    .field input,.field select,.field textarea{
+      width:100%;border:1px solid #dce2eb;border-radius:9px;
+      padding:11px 12px;font:inherit;background:#fff;color:var(--text)
+    }
+    .field textarea{min-height:86px;resize:vertical}
+    .btn{
+      display:inline-flex;align-items:center;justify-content:center;
+      border:0;border-radius:9px;padding:10px 16px;background:var(--navy2);
+      color:#fff;font:inherit;font-size:13px;cursor:pointer
+    }
+    .btn.gold{background:var(--gold);color:var(--navy);font-weight:bold}
+    .btn.danger{background:#b42318}
+    .btn.light{background:#edf1f6;color:var(--navy)}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+    .table-wrap{overflow:auto}
+    table{width:100%;border-collapse:collapse;min-width:760px}
+    th,td{
+      padding:12px 10px;text-align:right;border-bottom:1px solid var(--line);
+      font-size:13px;vertical-align:middle
+    }
+    th{background:#f7f9fc;color:#506078;font-weight:bold}
+    tr:hover td{background:#fcfdff}
+    .flash{padding:12px 15px;border-radius:10px;margin-bottom:14px;font-size:13px}
+    .flash.ok{background:#eaf8ef;color:#176b36}
+    .flash.error{background:#fff0ef;color:#a1261b}
+    .muted{color:var(--muted)}
+    .pill{
+      display:inline-block;padding:5px 9px;border-radius:20px;
+      background:#edf1f6;font-size:11px
+    }
+    .pill.ok{background:#e7f6ec;color:#176b36}
+    .pill.bad{background:#fff0ef;color:#a1261b}
+    @media(max-width:900px){
+      .sidebar{width:220px}
+      .main{margin-right:220px;padding:18px}
+    }
+    @media(max-width:680px){
+      .sidebar{position:relative;width:auto;bottom:auto}
+      .nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px}
+      .nav-title{margin-top:12px}
+      .main{margin:0;padding:14px}
+      .grid{grid-template-columns:1fr}
+      .topline{align-items:flex-start;flex-direction:column}
+    }
+    {% block extra_css %}{% endblock %}
+  </style>
+  {% block extra_head %}{% endblock %}
 </head>
-
 <body>
 <div class="layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="{{ url_for('static', filename='logo.jpg') }}"
+           alt="FORTANCE HOTELS"
+           onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+      <span class="brand-fallback" style="display:none">FORTANCE HOTELS</span>
+    </div>
 
-    <aside class="side">
+    <div class="userbox">
+      <small>مرحبًا بك</small>
+      <strong>{{ user_name or 'مستخدم النظام' }}</strong>
+      <small>{{ ROLES.get(user_role, user_role or '') }}</small>
+    </div>
 
-        <div class="brand">
-            <img
-                src="{{ url_for('static', filename='logo.jpg') }}"
-                alt="شعار FORTANCE HOTELS"
-                onerror="this.style.display='none';"
-            >
+    <nav class="nav">
+      <div class="nav-title">القائمة الرئيسية</div>
+      <a class="{% if request.endpoint=='dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}">▦ لوحة التحكم</a>
+      <a class="{% if request.endpoint=='hotels' %}active{% endif %}" href="{{ url_for('hotels') }}">▤ الفنادق</a>
+      <a class="{% if request.endpoint=='rooms' %}active{% endif %}" href="{{ url_for('rooms') }}">▣ الغرف</a>
+      <a class="{% if request.endpoint in ['bookings','invoice','cancel_booking'] %}active{% endif %}" href="{{ url_for('bookings') }}">▧ الحجوزات</a>
+      <a class="{% if request.endpoint in ['group_bookings','cancel_group_booking'] %}active{% endif %}" href="{{ url_for('group_bookings') }}">▥ حجوزات المجموعات</a>
+      <a class="{% if request.endpoint=='companies' %}active{% endif %}" href="{{ url_for('companies') }}">▤ الشركات</a>
 
-            <div class="brand-name">FORTANCE HOTELS</div>
-            <div class="brand-subtitle">إدارة الضيافة الفندقية</div>
-        </div>
+      {% if user_role=='admin' %}
+      <a class="{% if request.endpoint in ['employees','toggle_employee'] %}active{% endif %}" href="{{ url_for('employees') }}">♙ الموظفون</a>
+      {% endif %}
 
-        <div class="userbox">
-            <div class="welcome">مرحبًا بك</div>
+      <div class="nav-title">الإدارة والتقارير</div>
+      <a class="{% if request.endpoint=='seasons' %}active{% endif %}" href="{{ url_for('seasons') }}">◇ المواسم</a>
+      <a class="{% if request.endpoint=='reports' %}active{% endif %}" href="{{ url_for('reports') }}">▥ التقارير</a>
 
-            <strong class="username">
-                {{ user_name or 'المستخدم' }}
-            </strong>
+      {% if user_role in ['admin','accountant'] %}
+      <a class="{% if request.endpoint=='finance' %}active{% endif %}" href="{{ url_for('finance') }}">﷼ الحسابات</a>
+      {% endif %}
 
-            <br>
+      {% if user_role=='admin' %}
+      <a class="{% if request.endpoint=='settings' %}active{% endif %}" href="{{ url_for('settings') }}">⚙ الإعدادات</a>
+      {% endif %}
 
-            <span class="user-role">
-                {{ ROLES.get(user_role, user_role or 'مستخدم') }}
-            </span>
-        </div>
+      <a href="{{ url_for('logout') }}">⇥ تسجيل الخروج</a>
+    </nav>
+  </aside>
 
-        <div class="menu-title">القائمة الرئيسية</div>
+  <main class="main">
+    <header class="topline">
+      <div>
+        <h1>{% block page_title %}نظام إدارة الفنادق{% endblock %}</h1>
+        <div class="sub">FORTANCE HOTELS · نظام الإدارة الداخلي</div>
+      </div>
+      <span class="pill">{{ system_settings.currency or 'ريال سعودي' }}</span>
+    </header>
 
-        <nav class="menu">
+    {% with messages=get_flashed_messages(with_categories=true) %}
+      {% for category,message in messages %}
+      <div class="flash {{ 'ok' if category=='ok' else 'error' }}">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
 
-            <a href="{{ url_for('dashboard') }}"
-               class="{% if request.path == '/dashboard' %}active{% endif %}">
-                <span>🏠</span><span>الرئيسية</span>
-            </a>
-
-            <a href="{{ url_for('hotels') }}"
-               class="{% if request.path.startswith('/hotels') %}active{% endif %}">
-                <span>🏨</span><span>الفنادق</span>
-            </a>
-
-            <a href="{{ url_for('rooms') }}"
-               class="{% if request.path.startswith('/rooms') %}active{% endif %}">
-                <span>🛏️</span><span>الغرف</span>
-            </a>
-
-            <a href="{{ url_for('bookings') }}"
-               class="{% if request.path.startswith('/bookings') %}active{% endif %}">
-                <span>📅</span><span>الحجوزات</span>
-            </a>
-
-            <a href="/group-bookings"
-               class="{% if request.path.startswith('/group-bookings') %}active{% endif %}">
-                <span>👥</span><span>حجوزات المجموعات</span>
-            </a>
-
-            <a href="/companies"
-               class="{% if request.path.startswith('/companies') %}active{% endif %}">
-                <span>🏢</span><span>الشركات</span>
-            </a>
-
-            {% if user_role == 'admin' %}
-
-            <a href="/employees"
-               class="{% if request.path.startswith('/employees') %}active{% endif %}">
-                <span>👤</span><span>الموظفون</span>
-            </a>
-
-            <a href="/settings"
-               class="{% if request.path.startswith('/settings') %}active{% endif %}">
-                <span>⚙️</span><span>إعدادات النظام</span>
-            </a>
-
-            {% endif %}
-
-            <a href="/seasons"
-               class="{% if request.path.startswith('/seasons') %}active{% endif %}">
-                <span>🗓️</span><span>الإجازات والمواسم</span>
-            </a>
-
-            <a href="/reports"
-               class="{% if request.path.startswith('/reports') %}active{% endif %}">
-                <span>📊</span><span>التقارير</span>
-            </a>
-
-            <a href="{{ url_for('logout') }}" class="logout">
-                <span>🚪</span><span>تسجيل الخروج</span>
-            </a>
-
-        </nav>
-    </aside>
-
-    <main class="main">
-
-        <div class="topbar">
-            <div>
-                <h2 class="topbar-title">
-                    {% block page_title %}نظام إدارة الفنادق{% endblock %}
-                </h2>
-
-                <div class="topbar-subtitle">
-                    إدارة الفنادق والغرف والحجوزات
-                </div>
-            </div>
-
-            <div class="company-label">FORTANCE HOTELS</div>
-        </div>
-
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% for cat, msg in messages %}
-                <div class="flash {{ cat }}" role="status">
-                    {{ msg }}
-                </div>
-            {% endfor %}
-        {% endwith %}
-
-        <div class="content-area">
-            {% block content %}{% endblock %}
-        </div>
-
-    </main>
-
+    {% block content %}{% endblock %}
+  </main>
 </div>
 
 {% block extra_scripts %}{% endblock %}
-
 </body>
 </html>
-```
