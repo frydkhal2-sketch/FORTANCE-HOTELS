@@ -344,21 +344,7 @@ def init_db():
         )
 
     # إنشاء الفندق الافتراضي عند عدم وجود فنادق
-    hotel_count = conn.execute(
-        "SELECT COUNT(*) FROM hotels"
-    ).fetchone()[0]
-
-    if hotel_count == 0:
-        conn.execute(
-            """
-            INSERT INTO hotels(name, city, phone)
-            VALUES(?, ?, ?)
-            """,
-            (
-                "فندق ريان الجوار",
-                "مكة المكرمة",
-                ""
-            )
+  
         )
 
     # لا يتم إنشاء غرف تجريبية تلقائيًا
