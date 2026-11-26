@@ -1,84 +1,207 @@
+
 {% extends "base.html" %}
 
 {% block title %}فاتورة {{ b.code }} | FORTANCE HOTELS{% endblock %}
 {% block page_title %}فاتورة الحجز{% endblock %}
- 
+
 {% block extra_css %}
-.invoice{
-  max-width:900px;
-  margin:auto;
+.invoice {
+  max-width: 900px;
+  margin: auto;
+  color: #263447;
 }
-.invoice-head{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:20px;
-  border-bottom:3px solid var(--gold);
-  padding-bottom:18px;
-  margin-bottom:20px;
+
+.invoice-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  border-bottom: 3px solid var(--gold);
+  padding-bottom: 20px;
+  margin-bottom: 24px;
 }
-.invoice-head img{
-  max-width:180px;
-  max-height:65px;
-  object-fit:contain;
+
+.invoice-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
 }
-.invoice-title{
-  color:var(--navy);
-  font-size:25px;
-  font-weight:bold;
+
+.invoice-title {
+  color: var(--navy);
+  font-size: 27px;
+  font-weight: 800;
+  letter-spacing: .5px;
 }
-.invoice-grid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:12px;
+
+.invoice-subtitle {
+  color: var(--muted);
+  font-size: 14px;
 }
-.info{
-  padding:13px;
-  background:#f8f9fc;
-  border-radius:10px;
+
+.invoice-head img {
+  width: 180px;
+  max-width: 35%;
+  max-height: 75px;
+  object-fit: contain;
 }
-.info small{
-  display:block;
-  color:var(--muted);
-  margin-bottom:6px;
+
+.invoice-section-title {
+  color: var(--navy);
+  font-size: 16px;
+  font-weight: 800;
+  margin: 22px 0 12px;
 }
-.info strong{
-  color:var(--navy);
+
+.invoice-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
-.money{
-  margin-top:20px;
-  border:1px solid var(--line);
-  border-radius:12px;
-  overflow:hidden;
+
+.info {
+  padding: 14px;
+  background: #f8f9fc;
+  border: 1px solid #edf0f5;
+  border-radius: 10px;
+  min-width: 0;
 }
-.money div{
-  display:flex;
-  justify-content:space-between;
-  padding:13px 16px;
-  border-bottom:1px solid var(--line);
+
+.info small {
+  display: block;
+  color: var(--muted);
+  margin-bottom: 7px;
+  font-size: 12px;
 }
-.money div:last-child{
-  border:0;
-  background:#fff8e8;
-  font-weight:bold;
-  color:var(--navy);
-  font-size:17px;
+
+.info strong {
+  color: var(--navy);
+  font-size: 14px;
+  overflow-wrap: anywhere;
 }
-.notes{
-  padding:14px;
-  background:#fffaf0;
-  border-right:3px solid var(--gold);
-  border-radius:8px;
-  margin-top:18px;
-  white-space:pre-wrap;
+
+.money {
+  margin-top: 22px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
 }
-@media print{
-  body{background:#fff}
-  .sidebar,.topline,.no-print,.flash{display:none!important}
-  .main{margin:0;padding:0}
-  .card{border:0;box-shadow:none;padding:0}
-  .invoice{max-width:none}
-  .invoice-head{padding-top:10px}
+
+.money div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  padding: 15px 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.money div:last-child {
+  border: 0;
+  background: #fff8e8;
+  font-weight: 800;
+  color: var(--navy);
+  font-size: 18px;
+}
+
+.money strong {
+  text-align: left;
+  direction: ltr;
+}
+
+.notes {
+  padding: 15px;
+  background: #fffaf0;
+  border-right: 4px solid var(--gold);
+  border-radius: 9px;
+  margin-top: 20px;
+  white-space: pre-wrap;
+  line-height: 1.8;
+}
+
+.invoice-footer {
+  text-align: center;
+  margin-top: 30px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 2;
+}
+
+.invoice-footer strong {
+  color: var(--navy);
+}
+
+.invoice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+@media(max-width:600px) {
+  .invoice-head {
+    align-items: flex-start;
+  }
+
+  .invoice-title {
+    font-size: 21px;
+  }
+
+  .invoice-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .money div {
+    padding: 13px;
+  }
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  body {
+    background: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .sidebar,
+  .topline,
+  .no-print,
+  .flash {
+    display: none !important;
+  }
+
+  .main {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .card {
+    border: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+
+  .invoice {
+    max-width: none;
+    width: 100%;
+  }
+
+  .invoice-head {
+    padding-top: 10px;
+  }
+
+  .info,
+  .money,
+  .notes {
+    break-inside: avoid;
+  }
 }
 {% endblock %}
 
@@ -86,28 +209,30 @@
 <section class="card invoice">
 
   <div class="invoice-head">
-    <div>
+    <div class="invoice-brand">
       <div class="invoice-title">
         {{ settings.company_name or 'FORTANCE HOTELS' }}
       </div>
-      <div class="muted">فاتورة حجز فندقي</div>
+      <div class="invoice-subtitle">
+        فاتورة حجز فندقي
+      </div>
     </div>
 
     <img
-      src="{{ url_for('static',filename='logo.jpg') }}"
+      src="{{ url_for('static', filename='logo.jpg') }}"
       alt="FORTANCE HOTELS"
       onerror="this.style.display='none'"
     >
   </div>
 
-  <div class="actions no-print" style="margin-bottom:18px">
-    <button class="btn gold" onclick="window.print()">
+  <div class="invoice-actions no-print">
+    <button class="btn gold" type="button" onclick="window.print()">
       طباعة / حفظ PDF
     </button>
 
     {% if whatsapp_url %}
-    <a class="btn" href="{{ whatsapp_url }}" target="_blank">
-      إرسال الفاتورة عبر واتساب
+    <a class="btn" href="{{ whatsapp_url }}" target="_blank" rel="noopener">
+      إرسال عبر واتساب
     </a>
     {% endif %}
 
@@ -116,32 +241,34 @@
     </a>
   </div>
 
+  <div class="invoice-section-title">بيانات الفاتورة</div>
+
   <div class="invoice-grid">
 
     <div class="info">
       <small>رقم الفاتورة / الحجز</small>
-      <strong>{{ b.code }}</strong>
+      <strong>{{ b.code or '—' }}</strong>
     </div>
 
     <div class="info">
       <small>تاريخ إصدار الفاتورة</small>
-      <strong>{{ b.created_at[:10] if b.created_at else '' }}</strong>
+      <strong>{{ b.created_at[:10] if b.created_at else '—' }}</strong>
     </div>
 
     <div class="info">
       <small>اسم العميل</small>
-      <strong>{{ b.customer }}</strong>
+      <strong>{{ b.customer or '—' }}</strong>
     </div>
 
     <div class="info">
       <small>رقم الجوال</small>
-      <strong>{{ b.phone or 'غير مسجل' }}</strong>
+      <strong>{{ b.customer_phone or b.phone or 'غير مسجل' }}</strong>
     </div>
 
     <div class="info">
       <small>الفندق</small>
       <strong>
-        {{ b.hotel }}
+        {{ b.hotel or '—' }}
         {% if b.city %} - {{ b.city }}{% endif %}
       </strong>
     </div>
@@ -149,30 +276,30 @@
     <div class="info">
       <small>رقم الغرفة / النوع</small>
       <strong>
-        {{ b.room }}
+        {{ b.room or '—' }}
         {% if b.room_type %} - {{ b.room_type }}{% endif %}
       </strong>
     </div>
 
     <div class="info">
       <small>تاريخ الوصول</small>
-      <strong>{{ b.checkin }}</strong>
+      <strong>{{ b.checkin or '—' }}</strong>
     </div>
 
     <div class="info">
       <small>تاريخ المغادرة</small>
-      <strong>{{ b.checkout }}</strong>
+      <strong>{{ b.checkout or '—' }}</strong>
     </div>
 
     <div class="info">
       <small>عدد الليالي</small>
-      <strong>{{ b.nights }}</strong>
+      <strong>{{ b.nights or 0 }}</strong>
     </div>
 
     <div class="info">
       <small>حالة الحجز</small>
       <strong>
-        {{ 'ملغي' if b.status=='cancelled' else 'مؤكد' }}
+        {{ 'ملغي' if b.status == 'cancelled' else 'مؤكد' }}
       </strong>
     </div>
 
@@ -181,10 +308,11 @@
   {% if b.notes %}
   <div class="notes">
     <strong>ملاحظات الحجز</strong>
-    <br>
-    {{ b.notes }}
+    <div>{{ b.notes }}</div>
   </div>
   {% endif %}
+
+  <div class="invoice-section-title">ملخص المبالغ</div>
 
   <div class="money">
 
@@ -214,26 +342,22 @@
 
   </div>
 
-  <div style="text-align:center;margin-top:28px;color:var(--muted);font-size:12px">
-
-    {{ settings.company_name or 'FORTANCE HOTELS' }}
+  <div class="invoice-footer">
+    <strong>{{ settings.company_name or 'FORTANCE HOTELS' }}</strong>
 
     {% if settings.company_phone %}
-      · {{ settings.company_phone }}
+      <div>الهاتف: {{ settings.company_phone }}</div>
     {% endif %}
 
     {% if settings.company_email %}
-      · {{ settings.company_email }}
+      <div>البريد الإلكتروني: {{ settings.company_email }}</div>
     {% endif %}
 
     {% if settings.company_address %}
       <div>{{ settings.company_address }}</div>
     {% endif %}
 
-    <div style="margin-top:10px">
-      شكرًا لاختياركم خدماتنا
-    </div>
-
+    <div>شكرًا لاختياركم خدماتنا</div>
   </div>
 
 </section>
