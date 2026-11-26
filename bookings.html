@@ -1,13 +1,15 @@
+
 {% extends "base.html" %}
 
 {% block title %}الحجوزات | FORTANCE HOTELS{% endblock %}
 {% block page_title %}إدارة الحجوزات{% endblock %}
 
 {% block content %}
- 
+
 <section class="card">
   <h2>إضافة حجز جديد</h2>
 
+  {% if hotels and rooms %}
   <form method="post" action="{{ url_for('bookings') }}" id="booking-form">
     <div class="grid">
 
@@ -38,7 +40,7 @@
           {% for r in rooms %}
           <option value="{{ r.id }}"
                   data-hotel-id="{{ r.hotel_id }}"
-                  data-price="{{ r.price }}">
+                  data-price="{{ r.price or 0 }}">
             {{ r.number }} · {{ r.room_type or 'غرفة' }} ·
             {{ '%.2f'|format(r.price or 0) }} لليلة
           </option>
@@ -99,8 +101,17 @@
       <button class="btn gold" type="submit">حفظ الحجز</button>
     </div>
   </form>
-</section>
 
+  {% else %}
+  <p class="muted">
+    {% if not hotels %}
+      لا توجد فنادق حالياً. أضف فندقاً أولاً من صفحة الفنادق.
+    {% else %}
+      لا توجد غرف مسجلة لهذا النظام. أضف غرفاً من صفحة الغرف أولاً.
+    {% endif %}
+  </p>
+  {% endif %}
+</section>
 
 <section class="card">
   <h2>سجل الحجوزات</h2>
@@ -156,11 +167,11 @@
 
           <td>{{ '%.2f'|format(b.price or 0) }}</td>
           <td>{{ '%.2f'|format(b.paid or 0) }}</td>
-          <td>{{ '%.2f'|format(remaining if remaining>0 else 0) }}</td>
+          <td>{{ '%.2f'|format(remaining if remaining > 0 else 0) }}</td>
 
           <td>
-            <span class="pill {{ 'bad' if b.status=='cancelled' else 'ok' }}">
-              {{ 'ملغي' if b.status=='cancelled' else 'مؤكد' }}
+            <span class="pill {{ 'bad' if b.status == 'cancelled' else 'ok' }}">
+              {{ 'ملغي' if b.status == 'cancelled' else 'مؤكد' }}
             </span>
           </td>
 
@@ -168,7 +179,7 @@
             <div class="actions" style="margin:0">
 
               <a class="btn light"
-                 href="{{ url_for('invoice',bid=b.id) }}"
+                 href="{{ url_for('invoice', bid=b.id) }}"
                  target="_blank">
                 الفاتورة
               </a>
@@ -179,18 +190,19 @@
                   {% set wa_phone='966' ~ wa_phone[1:] %}
                 {% endif %}
 
-                {% set wa_text='مرحباً ' ~ b.customer ~ '، تفاصيل حجزك ' ~ b.code ~ ' في ' ~ b.hotel ~ ' من ' ~ b.checkin ~ ' إلى ' ~ b.checkout ~ '. الإجمالي: ' ~ ('%.2f'|format(b.price or 0)) ~ '، المدفوع: ' ~ ('%.2f'|format(b.paid or 0)) ~ '، المتبقي: ' ~ ('%.2f'|format(remaining if remaining>0 else 0)) %}
+                {% set wa_text='مرحباً ' ~ b.customer ~ '، تفاصيل حجزك ' ~ b.code ~ ' في ' ~ b.hotel ~ ' من ' ~ b.checkin ~ ' إلى ' ~ b.checkout ~ '. الإجمالي: ' ~ ('%.2f'|format(b.price or 0)) ~ '، المدفوع: ' ~ ('%.2f'|format(b.paid or 0)) ~ '، المتبقي: ' ~ ('%.2f'|format(remaining if remaining > 0 else 0)) %}
 
                 <a class="btn"
                    target="_blank"
+                   rel="noopener"
                    href="https://wa.me/{{ wa_phone }}?text={{ wa_text|urlencode }}">
                   واتساب
                 </a>
               {% endif %}
 
-              {% if b.status!='cancelled' %}
+              {% if b.status != 'cancelled' %}
               <form method="post"
-                    action="{{ url_for('cancel_booking',bid=b.id) }}"
+                    action="{{ url_for('cancel_booking', bid=b.id) }}"
                     onsubmit="return confirm('هل تريد إلغاء هذا الحجز؟')">
                 <button class="btn danger" type="submit">إلغاء</button>
               </form>
@@ -212,69 +224,57 @@
 
 {% endblock %}
 
-
 {% block extra_scripts %}
 <script>
-(function(){
+(function () {
+  const form = document.getElementById('booking-form');
+
+  const search = document.getElementById('booking-search');
+  const status = document.getElementById('status-filter');
+
+  // البحث وتصفية سجل الحجوزات
+  if (search && status) {
+    function filterTable() {
+      const query = search.value.trim().toLowerCase();
+      const selectedStatus = status.value;
+
+      document.querySelectorAll('#bookings-table tbody tr[data-status]')
+        .forEach(function (row) {
+          row.hidden =
+            (selectedStatus && row.dataset.status !== selectedStatus) ||
+            !row.innerText.toLowerCase().includes(query);
+        });
+    }
+
+    search.addEventListener('input', filterTable);
+    status.addEventListener('change', filterTable);
+  }
+
+  // إذا لم يظهر نموذج الحجز، لا ننفذ حساباته
+  if (!form) return;
 
   const hotel = document.getElementById('hotel-select');
   const room = document.getElementById('room-select');
-
   const checkin = document.getElementById('checkin');
   const checkout = document.getElementById('checkout');
-
   const nightsEl = document.getElementById('nights');
   const totalEl = document.getElementById('total');
   const paid = document.getElementById('paid');
 
-  function filterRooms(){
+  function calculate() {
+    let nights = 0;
 
-    const hotelId = hotel.value;
-    let firstRoom = '';
+    if (checkin.value && checkout.value) {
+      const start = new Date(checkin.value + 'T00:00:00');
+      const end = new Date(checkout.value + 'T00:00:00');
 
-    Array.from(room.options).forEach((option) => {
+      nights = Math.round((end - start) / 86400000);
 
-      if(!option.value){
-        option.hidden = false;
-        return;
-      }
-
-      const show = option.dataset.hotelId === hotelId;
-      option.hidden = !show;
-
-      if(show && !firstRoom){
-        firstRoom = option.value;
-      }
-
-    });
-
-    if(!room.value || room.selectedOptions[0]?.hidden){
-      room.value = firstRoom || '';
-    }
-
-    calculate();
-  }
-
-  function calculate(){
-
-    const start = checkin.value
-      ? new Date(checkin.value + 'T00:00:00')
-      : null;
-
-    const end = checkout.value
-      ? new Date(checkout.value + 'T00:00:00')
-      : null;
-
-    let nights = start && end
-      ? Math.round((end - start) / 86400000)
-      : 0;
-
-    if(nights < 0){
-      nights = 0;
+      if (nights < 0) nights = 0;
     }
 
     const selectedRoom = room.selectedOptions[0];
-    const price = selectedRoom
+    const price = selectedRoom && selectedRoom.value
       ? Number(selectedRoom.dataset.price || 0)
       : 0;
 
@@ -282,21 +282,53 @@
 
     nightsEl.textContent = nights;
     totalEl.textContent = total.toFixed(2);
-    paid.max = total || 0;
+
+    paid.max = total.toFixed(2);
   }
 
-  [room, checkin, checkout].forEach((element) => {
-    element.addEventListener('change', calculate);
-  });
+  function filterRooms() {
+    const hotelId = hotel.value;
+    let firstRoom = '';
+
+    Array.from(room.options).forEach(function (option) {
+      if (!option.value) {
+        option.hidden = false;
+        return;
+      }
+
+      const show = hotelId !== '' &&
+                   option.dataset.hotelId === hotelId;
+
+      option.hidden = !show;
+
+      if (show && !firstRoom) {
+        firstRoom = option.value;
+      }
+    });
+
+    if (!room.value || !room.selectedOptions[0] ||
+        room.selectedOptions[0].hidden) {
+      room.value = firstRoom;
+    }
+
+    calculate();
+  }
 
   hotel.addEventListener('change', filterRooms);
+  room.addEventListener('change', calculate);
+  checkin.addEventListener('change', calculate);
+  checkout.addEventListener('change', calculate);
 
-  filterRooms();
+  form.addEventListener('submit', function (event) {
+    if (!hotel.value || !room.value) {
+      event.preventDefault();
+      alert('يرجى اختيار الفندق والغرفة.');
+      return;
+    }
 
-  document.getElementById('booking-form').addEventListener('submit', function(e){
-
-    if(checkin.value && checkout.value && checkout.value <= checkin.value){
-      e.preventDefault();
+    if (!checkin.value || !checkout.value ||
+        checkout.value <= checkin.value) {
+      event.preventDefault();
       alert('تاريخ المغادرة يجب أن يكون بعد تاريخ الوصول.');
       return;
     }
@@ -304,34 +336,14 @@
     const paidAmount = Number(paid.value || 0);
     const totalAmount = Number(totalEl.textContent || 0);
 
-    if(paidAmount > totalAmount){
-      e.preventDefault();
-      alert('المبلغ المدفوع أكبر من إجمالي الحجز.');
+    if (paidAmount < 0 || paidAmount > totalAmount) {
+      event.preventDefault();
+      alert('يرجى التأكد من المبلغ المدفوع، يجب ألا يتجاوز إجمالي الحجز.');
+      return;
     }
-
   });
 
-  const search = document.getElementById('booking-search');
-  const status = document.getElementById('status-filter');
-
-  function filterTable(){
-
-    const query = search.value.trim().toLowerCase();
-    const selectedStatus = status.value;
-
-    document.querySelectorAll('#bookings-table tbody tr[data-status]').forEach((row) => {
-
-      row.hidden =
-        (selectedStatus && row.dataset.status !== selectedStatus) ||
-        !row.innerText.toLowerCase().includes(query);
-
-    });
-
-  }
-
-  search.addEventListener('input', filterTable);
-  status.addEventListener('change', filterTable);
-
+  filterRooms();
 })();
 </script>
 {% endblock %}
