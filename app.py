@@ -310,6 +310,54 @@ def init_db():
             definition
         )
 
+        # السعر اليدوي للحجز الفردي
+    ensure_column(
+        conn,
+        "bookings",
+        "manual_nightly_price",
+        "REAL DEFAULT 0"
+    )
+
+    # السعر اليدوي لكل غرفة في المجموعة
+    ensure_column(
+        conn,
+        "group_booking_rooms",
+        "nightly_price",
+        "REAL DEFAULT 0"
+    )
+        # تعبئة الأسعار القديمة دون تغيير إجمالي الحجوزات السابقة
+    conn.execute("""
+        UPDATE bookings
+        SET manual_nightly_price =
+            CASE
+                WHEN nights > 0 THEN price / nights
+                ELSE 0
+            END
+        WHERE manual_nightly_price = 0
+    """)
+
+    conn.execute("""
+        UPDATE group_booking_rooms
+        SET nightly_price =
+            CASE
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM group_bookings gb
+                    WHERE gb.id = group_booking_rooms.group_booking_id
+                      AND gb.checkin IS NOT NULL
+                      AND gb.checkout IS NOT NULL
+                      AND julianday(gb.checkout) > julianday(gb.checkin)
+                )
+                THEN price / (
+                    SELECT julianday(gb.checkout) - julianday(gb.checkin)
+                    FROM group_bookings gb
+                    WHERE gb.id = group_booking_rooms.group_booking_id
+                )
+                ELSE 0
+            END
+        WHERE nightly_price = 0
+    """)
+
     # إعدادات النظام الافتراضية
     for key, value in DEFAULT_SETTINGS.items():
         conn.execute(
